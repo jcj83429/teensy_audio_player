@@ -29,6 +29,8 @@ AudioConnection          patchCord6(mixer2, 0, i2sslave1, 1);
 // Use these with the Teensy 3.5 & 3.6 SD card
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 
+#define LED_PIN 13
+
 SdFatSdioEX sdEx;
 SdBaseFile sdRoot;
 
@@ -38,6 +40,7 @@ int numFiles = 0;
 SdBaseFile curDirFiles[MAX_FILES];
 SdBaseFile *sortedCurDirFiles[MAX_FILES];
 MyCodecFile myCodecFile(NULL);
+int currentFileIndex = -1;
 
 void setSampleRate(unsigned long long sampleRate){
   uint8_t error;
@@ -46,13 +49,17 @@ void setSampleRate(unsigned long long sampleRate){
   if(error){
     Serial.print("error clk0 ");
     Serial.println(error);
+    return;
   }
   // clk1 = BCLK
   error = si5351.set_freq(64 * sampleRate * SI5351_FREQ_MULT, SI5351_CLK1);
   if(error){
     Serial.print("error clk1 ");
     Serial.println(error);
+    return;
   }
+  Serial.print("sample rate changed to ");
+  Serial.println((int)sampleRate);
 }
 
 void quicksortFiles(SdBaseFile **A, int len) {
@@ -148,31 +155,89 @@ void printCurDir(){
   }
 }
 
+void playFile(SdBaseFile *file) {
+  file->getName(tmpFileName, sizeof(tmpFileName));
+  Serial.print("play file: ");
+  Serial.println(tmpFileName);
+  playMp31.stop();
+  file->rewind();
+  myCodecFile = MyCodecFile(file);
+  playMp31.load(&myCodecFile);
+  playMp31.play();
+}
+
+int findPlayableFile(int step){
+  int filesTried = 0;
+  int fileIndex = currentFileIndex;
+  while(filesTried < numFiles){
+    fileIndex = (fileIndex + numFiles + step) % numFiles;
+    SdBaseFile *f = sortedCurDirFiles[fileIndex];
+    if(f->isFile()){
+      return fileIndex;
+    }
+    filesTried++;
+  }
+  return -1;
+}
+
+void playNext(){
+  int newFileIndex = findPlayableFile(1);
+  if(newFileIndex < 0){
+    Serial.println("no playable file");
+  }
+  currentFileIndex = newFileIndex;
+  playFile(sortedCurDirFiles[currentFileIndex]);
+}
+
+void playPrev(){
+  int newFileIndex = findPlayableFile(-1);
+  if(newFileIndex < 0){
+    Serial.println("no playable file");
+  }
+  currentFileIndex = newFileIndex;
+  playFile(sortedCurDirFiles[currentFileIndex]);
+}
+
+void flashError(int error){
+  for(int i=0; i<error; i++){
+    digitalWrite(LED_PIN, HIGH);
+    delay(250);
+    digitalWrite(LED_PIN, LOW);
+    delay(250);
+  }
+  delay(1000);
+}
+
 void setup() {
   Serial.begin(115200);
-  while (!Serial);
+  delay(50);
+
+  pinMode(LED_PIN, OUTPUT);
 
   // put your setup code here, to run once:
   AudioMemory(20);
 
   // FOR DAC SANITY
-  // sine1.amplitude(0.25);
+  // sine1.amplitude(0.20);
   // sine1.frequency(1000);
 
   // si5351 setup
-  bool i2c_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-  if(i2c_found){
+  bool si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
+  if(si5351_found){
     Serial.println("si5351 found");
   }else{
     while(1){
       Serial.println("si5351 not found");
-      delay(1000);
+      flashError(1);
     }
   }
   setSampleRate(44100);
 
   if (!sdEx.begin()) {
-    sdEx.initErrorHalt("SdFatSdioEX begin() failed");
+    while(1){
+      Serial.println("SdFatSdioEX begin() failed");
+      flashError(2);
+    }
   } else {
     Serial.println("SD init success");
   }
@@ -188,7 +253,7 @@ void setup() {
   sdRoot.open("/");
   loadDirectory(&sdRoot);
   if(numFiles){
-    playFile(sortedCurDirFiles[0]);
+    playNext();
   }else{
     while(true){
       Serial.println("NO FILES");
@@ -197,18 +262,9 @@ void setup() {
   }
 }
 
-void playFile(SdBaseFile *file) {
-  file->getName(tmpFileName, sizeof(tmpFileName));
-  Serial.print("play file: ");
-  Serial.println(tmpFileName);
-  playMp31.stop();
-  file->rewind();
-  myCodecFile = MyCodecFile(file);
-  playMp31.load(&myCodecFile);
-  playMp31.play();
-}
+int sampleRates[2] = {44100, 88200};
+int sampleRateIndex = 0;
 
-int currentFileIndex = 0;
 void loop() {
   // put your main code here, to run repeatedly:
   if(Serial.available()){
@@ -218,12 +274,14 @@ void loop() {
         printCurDir();
         break;
       case 'N':
-        currentFileIndex = (currentFileIndex + 1) % numFiles;
-        playFile(sortedCurDirFiles[currentFileIndex]);
+        playNext();
         break;
       case 'P':
-        currentFileIndex = (currentFileIndex + numFiles - 1) % numFiles;
-        playFile(sortedCurDirFiles[currentFileIndex]);
+        playPrev();
+        break;
+      case 'S':
+        sampleRateIndex ^= 1;
+        setSampleRate(sampleRates[sampleRateIndex]);
         break;
       default:
         Serial.print("unknown cmd ");
