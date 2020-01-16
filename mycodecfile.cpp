@@ -8,7 +8,7 @@ public:
   }
 
   bool f_eof(void) {
-    return sdFile->available();
+    return !sdFile->available();
   }
   bool fseek(const size_t position) {
     return sdFile->seekSet(position);
