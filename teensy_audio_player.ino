@@ -5,6 +5,8 @@
 #include <SerialFlash.h>
 #include "si5351.h"
 #include <play_sd_mp3.h>
+#include <play_sd_aac.h>
+#include <play_sd_flac.h>
 
 #include "mycodecfile.cpp"
 
@@ -13,17 +15,23 @@ Si5351 si5351;
 
 //////////////////// Teensy Audio library
 // GUItool: begin automatically generated code
-AudioPlaySdMp3           playMp31;     //xy=137.25,90.25
-AudioSynthWaveformSine   sine1;          //xy=145.25,162.25
+AudioPlaySdMp3           playMp31;     //xy=135.25,237.25
+AudioPlaySdAac           playAac1;     //xy=136.25,186.25
+AudioPlaySdFlac          playFlac1;     //xy=137.25,90.25
+AudioSynthWaveformSine   sine1;          //xy=139.25,135.25
 AudioMixer4              mixer1;         //xy=371.25,109.25
 AudioMixer4              mixer2;         //xy=371.25,221.25
 AudioOutputI2Sslave      i2sslave1;      //xy=531.25,160.25
-AudioConnection          patchCord1(playMp31, 0, mixer1, 0);
-AudioConnection          patchCord2(playMp31, 1, mixer2, 0);
-AudioConnection          patchCord3(sine1, 0, mixer1, 1);
-AudioConnection          patchCord4(sine1, 0, mixer2, 1);
-AudioConnection          patchCord5(mixer1, 0, i2sslave1, 0);
-AudioConnection          patchCord6(mixer2, 0, i2sslave1, 1);
+AudioConnection          patchCord5(playMp31, 0, mixer1, 0);
+AudioConnection          patchCord6(playMp31, 1, mixer2, 0);
+AudioConnection          patchCord3(playAac1, 0, mixer1, 2);
+AudioConnection          patchCord4(playAac1, 1, mixer2, 2);
+AudioConnection          patchCord1(playFlac1, 0, mixer1, 3);
+AudioConnection          patchCord2(playFlac1, 1, mixer2, 3);
+AudioConnection          patchCord7(sine1, 0, mixer1, 1);
+AudioConnection          patchCord8(sine1, 0, mixer2, 1);
+AudioConnection          patchCord9(mixer1, 0, i2sslave1, 0);
+AudioConnection          patchCord10(mixer2, 0, i2sslave1, 1);
 // GUItool: end automatically generated code
 
 // Use these with the Teensy 3.5 & 3.6 SD card
@@ -42,21 +50,32 @@ SdBaseFile *sortedCurDirFiles[MAX_FILES];
 MyCodecFile myCodecFile(NULL);
 int currentFileIndex = -1;
 
+enum FileType {
+  UNSUPPORTED,
+  DIR,
+  MP3,
+  AAC,
+  FLAC,
+};
+
 void setSampleRate(unsigned long long sampleRate){
   uint8_t error;
-  // clk0 = LRCLK
-  error = si5351.set_freq(sampleRate * SI5351_FREQ_MULT, SI5351_CLK0);
-  if(error){
-    Serial.print("error clk0 ");
-    Serial.println(error);
-    return;
-  }
-  // clk1 = BCLK
-  error = si5351.set_freq(64 * sampleRate * SI5351_FREQ_MULT, SI5351_CLK1);
-  if(error){
-    Serial.print("error clk1 ");
-    Serial.println(error);
-    return;
+  // sometimes the sample rate setting doens't go through, so repeate 3 times
+  for(int i=0; i<3; i++){
+    // clk0 = LRCLK
+    error = si5351.set_freq(sampleRate * SI5351_FREQ_MULT, SI5351_CLK0);
+    if(error){
+      Serial.print("error clk0 ");
+      Serial.println(error);
+      return;
+    }
+    // clk1 = BCLK
+    error = si5351.set_freq(64 * sampleRate * SI5351_FREQ_MULT, SI5351_CLK1);
+    if(error){
+      Serial.print("error clk1 ");
+      Serial.println(error);
+      return;
+    }
   }
   Serial.print("sample rate changed to ");
   Serial.println((int)sampleRate);
@@ -99,20 +118,28 @@ void quicksortFiles(SdBaseFile **A, int len) {
   quicksortFiles(A + i, len - i);
 }
 
-bool isSupportedFile(SdBaseFile *file) {
-  // directory = OK
+FileType getFileType(SdBaseFile *file) {
   if(file->isDir()){
-    return true;
+    return FileType::DIR;
   }
 
   // file: check extension
   file->getName(tmpFileName, sizeof(tmpFileName));
   int fnlen = strlen(tmpFileName);
+  
   if(strcasecmp("mp3", tmpFileName + fnlen - 3) == 0){
-    return true;
+    return FileType::MP3;
+  }
+  if(strcasecmp("aac", tmpFileName + fnlen - 3) == 0 ||
+     strcasecmp("mp4", tmpFileName + fnlen - 3) == 0 ||
+     strcasecmp("m4a", tmpFileName + fnlen - 3) == 0){
+    return FileType::AAC;
+  }
+  if(strcasecmp("flac", tmpFileName + fnlen - 4) == 0){
+    return FileType::FLAC;
   }
 
-  return false;
+  return FileType::UNSUPPORTED;
 }
 
 void loadDirectory(SdBaseFile *dir) {
@@ -128,7 +155,7 @@ void loadDirectory(SdBaseFile *dir) {
       break;
     }
 
-    if(!isSupportedFile(&curDirFiles[numFiles])){
+    if(getFileType(&curDirFiles[numFiles]) == FileType::UNSUPPORTED){
       curDirFiles[numFiles].close();
       continue;
     }
@@ -159,11 +186,40 @@ void playFile(SdBaseFile *file) {
   file->getName(tmpFileName, sizeof(tmpFileName));
   Serial.print("play file: ");
   Serial.println(tmpFileName);
-  playMp31.stop();
+  
+  if(playMp31.isPlaying()){
+    playMp31.stop();
+  }
+  if(playAac1.isPlaying()){
+    playAac1.stop();
+  }
+  if(playFlac1.isPlaying()){
+    playFlac1.stop();
+  }
+  
   file->rewind();
   myCodecFile = MyCodecFile(file);
-  playMp31.load(&myCodecFile);
-  playMp31.play();
+  int error = 0;
+  switch(getFileType(file)){
+    case FileType::MP3:
+      playMp31.load(&myCodecFile);
+      error = playMp31.play();
+      break;
+    case FileType::AAC:
+      playAac1.load(&myCodecFile);
+      error = playAac1.play();
+      break;
+    case FileType::FLAC:
+      playFlac1.load(&myCodecFile);
+      error = playFlac1.play();
+      break;
+    default:
+      Serial.println("WTF attempting to play dir or unsupported file?");
+      break;
+  }
+
+  Serial.print("error: 0x");
+  Serial.println(error, HEX);
 }
 
 int findPlayableFile(int step){
@@ -208,9 +264,30 @@ void flashError(int error){
   delay(1000);
 }
 
+void printStatus(){
+  Serial.print("playing: ");
+  Serial.print(playMp31.isPlaying());
+  Serial.print(playAac1.isPlaying());
+  Serial.print(playFlac1.isPlaying());
+  Serial.print(", pos: ");
+  Serial.print(myCodecFile.fposition());
+  Serial.print("/");
+  Serial.println(myCodecFile.fsize());
+}
+
+void testSeek(){
+  // don't seek too close to end of file or playback may end
+  uint32_t seekToTime = random(0, (int)playAac1.lengthMillis() * 0.9 / 1000);
+  Serial.print("seeking to ");
+  Serial.println(seekToTime);
+  bool result = playAac1.seek(seekToTime);
+  Serial.print("result: ");
+  Serial.println(result);
+}
+
 void setup() {
   Serial.begin(115200);
-  delay(50);
+  delay(100);
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -247,7 +324,7 @@ void setup() {
   // make sdEx the current volume.
   sdEx.chvol();
 
-  //sdEx.ls(LS_R | LS_DATE | LS_SIZE);
+  sdEx.ls(LS_R | LS_DATE | LS_SIZE);
 
   // populate curDirFiles with files in root. Directories are not supported yet
   sdRoot.open("/");
@@ -262,9 +339,11 @@ void setup() {
   }
 }
 
-int sampleRates[2] = {44100, 88200};
+int sampleRates[] = {44100, 88200, 22050};
 int sampleRateIndex = 0;
 
+
+unsigned long lastStatusTime = 0;
 void loop() {
   // put your main code here, to run repeatedly:
   if(Serial.available()){
@@ -279,9 +358,15 @@ void loop() {
       case 'P':
         playPrev();
         break;
-      case 'S':
-        sampleRateIndex ^= 1;
+      case 'R':
+        sampleRateIndex = (sampleRateIndex + 1) % 3;
         setSampleRate(sampleRates[sampleRateIndex]);
+        break;
+      case 'S':
+        printStatus();
+        break;
+      case 'T':
+        testSeek();
         break;
       default:
         Serial.print("unknown cmd ");

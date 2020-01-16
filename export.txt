@@ -5,16 +5,21 @@
 #include <SerialFlash.h>
 
 // GUItool: begin automatically generated code
+AudioPlaySdWav           playSdWav3;     //xy=135.25,237.25
+AudioPlaySdWav           playSdWav2;     //xy=136.25,186.25
 AudioPlaySdWav           playSdWav1;     //xy=137.25,90.25
-AudioSynthWaveformSine   sine1;          //xy=145.25,162.25
+AudioSynthWaveformSine   sine1;          //xy=139.25,135.25
 AudioMixer4              mixer1;         //xy=371.25,109.25
 AudioMixer4              mixer2;         //xy=371.25,221.25
 AudioOutputI2Sslave      i2sslave1;      //xy=531.25,160.25
-AudioConnection          patchCord1(playSdWav1, 0, mixer1, 0);
-AudioConnection          patchCord2(playSdWav1, 1, mixer2, 0);
-AudioConnection          patchCord3(sine1, 0, mixer1, 1);
-AudioConnection          patchCord4(sine1, 0, mixer2, 1);
-AudioConnection          patchCord5(mixer1, 0, i2sslave1, 0);
-AudioConnection          patchCord6(mixer2, 0, i2sslave1, 1);
+AudioConnection          patchCord1(playSdWav3, 0, mixer1, 3);
+AudioConnection          patchCord2(playSdWav3, 1, mixer2, 3);
+AudioConnection          patchCord3(playSdWav2, 0, mixer1, 2);
+AudioConnection          patchCord4(playSdWav2, 1, mixer2, 2);
+AudioConnection          patchCord5(playSdWav1, 0, mixer1, 0);
+AudioConnection          patchCord6(playSdWav1, 1, mixer2, 0);
+AudioConnection          patchCord7(sine1, 0, mixer1, 1);
+AudioConnection          patchCord8(sine1, 0, mixer2, 1);
+AudioConnection          patchCord9(mixer1, 0, i2sslave1, 0);
+AudioConnection          patchCord10(mixer2, 0, i2sslave1, 1);
 // GUItool: end automatically generated code
- 
