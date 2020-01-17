@@ -9,6 +9,13 @@
 #include <play_sd_flac.h>
 
 #include "mycodecfile.cpp"
+#include "directories.h"
+
+// Use these with the Teensy 3.5 & 3.6 SD card
+#define SDCARD_CS_PIN    BUILTIN_SDCARD
+#define LED_PIN 13
+
+#define MAX_FILES 256
 
 //////////////////// I2S clock generator
 Si5351 si5351;
@@ -34,19 +41,13 @@ AudioConnection          patchCord9(mixer1, 0, i2sslave1, 0);
 AudioConnection          patchCord10(mixer2, 0, i2sslave1, 1);
 // GUItool: end automatically generated code
 
-// Use these with the Teensy 3.5 & 3.6 SD card
-#define SDCARD_CS_PIN    BUILTIN_SDCARD
-
-#define LED_PIN 13
-
 SdFatSdioEX sdEx;
-SdBaseFile sdRoot;
 
-char tmpFileName[256];
-#define MAX_FILES 100
+SdBaseFile curDir;
 int numFiles = 0;
-SdBaseFile curDirFiles[MAX_FILES];
-SdBaseFile *sortedCurDirFiles[MAX_FILES];
+uint16_t curDirFileIdx[MAX_FILES];
+
+SdBaseFile currentFile;
 MyCodecFile myCodecFile(NULL);
 int currentFileIndex = -1;
 
@@ -57,6 +58,31 @@ enum FileType {
   AAC,
   FLAC,
 };
+
+// we can't disable the audio interrupt because otherwise the audio output will glitch.
+// so we suspend the decoders' decoding while keeping their outputs running
+void suspendDecoding(){
+  // for MP3 and AAC, just disable the ISR
+  if(playMp31.isPlaying() || playAac1.isPlaying()){
+    NVIC_DISABLE_IRQ(IRQ_AUDIOCODEC);
+  }
+  // for FLAC, use the suspend/resumeDecoding interface
+  if(playFlac1.isPlaying()){
+    playFlac1.suspendDecoding();
+  }
+}
+
+void resumeDecoding(){
+  // for MP3 and AAC, just enable and trigger the ISR
+  if(playMp31.isPlaying() || playAac1.isPlaying()){
+    NVIC_ENABLE_IRQ(IRQ_AUDIOCODEC);
+    NVIC_TRIGGER_INTERRUPT(IRQ_AUDIOCODEC);
+  }
+  // for FLAC, use the resumeDecoding interface to safely fill the buffer
+  if(playFlac1.isPlaying()){
+    playFlac1.resumeDecoding();
+  }
+}
 
 void setSampleRate(unsigned long long sampleRate){
   uint8_t error;
@@ -81,26 +107,26 @@ void setSampleRate(unsigned long long sampleRate){
   Serial.println((int)sampleRate);
 }
 
-void quicksortFiles(SdBaseFile **A, int len) {
+void quicksortFiles(SdBaseFile *dir, uint16_t *idxArr, int len) {
   if (len < 2) return;
- 
-  SdBaseFile *pivot = A[len / 2];
+
+  uint16_t pivot = idxArr[len / 2];
+  // the pointer returned by the file name cache may become invalid when we access another file name through the cache
+  // so make a copy of the pivot file name.
   char pivotFileName[256];
-  pivot->getName(pivotFileName, sizeof(pivotFileName));
+  strcpy(pivotFileName, getCachedFileName(dir, pivot));
 
   int i, j;
   for (i = 0, j = len - 1; ; i++, j--) {
     while(true){
-      A[i]->getName(tmpFileName, sizeof(tmpFileName));
-      if(strcmp(tmpFileName, pivotFileName) < 0){
+      if(strcmp(getCachedFileName(dir, idxArr[i]), pivotFileName) < 0){
         i++;
       }else{
         break;
       }
     }
     while(true){
-      A[j]->getName(tmpFileName, sizeof(tmpFileName));
-      if(strcmp(tmpFileName, pivotFileName) > 0){
+      if(strcmp(getCachedFileName(dir, idxArr[j]), pivotFileName) > 0){
         j--;
       }else{
         break;
@@ -109,13 +135,13 @@ void quicksortFiles(SdBaseFile **A, int len) {
  
     if (i >= j) break;
  
-    SdBaseFile *temp = A[i];
-    A[i]     = A[j];
-    A[j]     = temp;
+    uint16_t temp = idxArr[i];
+    idxArr[i] = idxArr[j];
+    idxArr[j] = temp;
   }
 
-  quicksortFiles(A, i);
-  quicksortFiles(A + i, len - i);
+  quicksortFiles(dir, idxArr, i);
+  quicksortFiles(dir, idxArr + i, len - i);
 }
 
 FileType getFileType(SdBaseFile *file) {
@@ -124,6 +150,7 @@ FileType getFileType(SdBaseFile *file) {
   }
 
   // file: check extension
+  char tmpFileName[256];
   file->getName(tmpFileName, sizeof(tmpFileName));
   int fnlen = strlen(tmpFileName);
   
@@ -142,47 +169,48 @@ FileType getFileType(SdBaseFile *file) {
   return FileType::UNSUPPORTED;
 }
 
-void loadDirectory(SdBaseFile *dir) {
-  // close all old curDirFiles
-  for(int i=0; i<numFiles; i++){
-    curDirFiles[i].close();
-  }
-  
+void loadCurDir() {
   numFiles = 0;
 
   while(numFiles < MAX_FILES){
-    if(!curDirFiles[numFiles].openNext(dir)){
+    SdBaseFile tmpFile;
+    suspendDecoding();
+    if(!tmpFile.openNext(&curDir)){
+      resumeDecoding();
       break;
     }
 
-    if(getFileType(&curDirFiles[numFiles]) == FileType::UNSUPPORTED){
-      curDirFiles[numFiles].close();
+    if(getFileType(&tmpFile) == FileType::UNSUPPORTED){
+      resumeDecoding();
       continue;
     }
-
-    sortedCurDirFiles[numFiles] = &curDirFiles[numFiles];
+    curDirFileIdx[numFiles] = tmpFile.dirIndex();
     numFiles++;
+    resumeDecoding();
   }
 
-  quicksortFiles(sortedCurDirFiles, numFiles);
+  quicksortFiles(&curDir, curDirFileIdx, numFiles);
 }
 
 void printCurDir(){
+  Serial.print("total files: ");
+  Serial.println(numFiles);
   for(int i=0; i<numFiles; i++){
-    SdBaseFile *f = sortedCurDirFiles[i];
-    f->getName(tmpFileName, sizeof(tmpFileName));
-    Serial.print(tmpFileName);
-    if (f->isDir()) {
+    SdBaseFile tmpFile;
+    tmpFile.open(&curDir, curDirFileIdx[i], O_RDONLY);
+    Serial.print(getCachedFileName(&curDir, curDirFileIdx[i]));
+    if (tmpFile.isDir()) {
       Serial.println("/");
     } else {
       // files have sizes, directories do not
       Serial.print("\t\t");
-      Serial.println(f->fileSize(), DEC);
+      Serial.println(tmpFile.fileSize(), DEC);
     }
   }
 }
 
 void playFile(SdBaseFile *file) {
+  char tmpFileName[256];
   file->getName(tmpFileName, sizeof(tmpFileName));
   Serial.print("play file: ");
   Serial.println(tmpFileName);
@@ -227,8 +255,9 @@ int findPlayableFile(int step){
   int fileIndex = currentFileIndex;
   while(filesTried < numFiles){
     fileIndex = (fileIndex + numFiles + step) % numFiles;
-    SdBaseFile *f = sortedCurDirFiles[fileIndex];
-    if(f->isFile()){
+    SdBaseFile tmpFile;
+    tmpFile.open(&curDir, curDirFileIdx[fileIndex], O_RDONLY);
+    if(tmpFile.isFile()){
       return fileIndex;
     }
     filesTried++;
@@ -242,7 +271,9 @@ void playNext(){
     Serial.println("no playable file");
   }
   currentFileIndex = newFileIndex;
-  playFile(sortedCurDirFiles[currentFileIndex]);
+  currentFile.close();
+  currentFile.open(&curDir, curDirFileIdx[currentFileIndex], O_RDONLY);
+  playFile(&currentFile);
 }
 
 void playPrev(){
@@ -251,7 +282,9 @@ void playPrev(){
     Serial.println("no playable file");
   }
   currentFileIndex = newFileIndex;
-  playFile(sortedCurDirFiles[currentFileIndex]);
+  currentFile.close();
+  currentFile.open(&curDir, curDirFileIdx[currentFileIndex], O_RDONLY);
+  playFile(&currentFile);
 }
 
 void flashError(int error){
@@ -283,6 +316,22 @@ void testSeek(){
   bool result = playAac1.seek(seekToTime);
   Serial.print("result: ");
   Serial.println(result);
+}
+
+void testDirSort(){
+  cacheTime = cacheSearchTime = 0;
+  suspendDecoding();
+  curDir.close();
+  curDir.open("www.saturn-global.com_david 80s music collection");
+  resumeDecoding();
+  unsigned long long startTime = micros();
+  loadCurDir();
+  Serial.print("took ");
+  Serial.println((int)(micros() - startTime));
+  Serial.print("cache took ");
+  Serial.println((int)cacheTime);
+  Serial.print("cache search took ");
+  Serial.println((int)cacheSearchTime);
 }
 
 void setup() {
@@ -324,11 +373,12 @@ void setup() {
   // make sdEx the current volume.
   sdEx.chvol();
 
-  sdEx.ls(LS_R | LS_DATE | LS_SIZE);
+  // sdEx.ls(LS_R | LS_DATE | LS_SIZE);
 
   // populate curDirFiles with files in root. Directories are not supported yet
-  sdRoot.open("/");
-  loadDirectory(&sdRoot);
+  curDir.open("/");
+  loadCurDir();
+
   if(numFiles){
     playNext();
   }else{
@@ -342,13 +392,15 @@ void setup() {
 int sampleRates[] = {44100, 88200, 22050};
 int sampleRateIndex = 0;
 
-
 unsigned long lastStatusTime = 0;
 void loop() {
   // put your main code here, to run repeatedly:
   if(Serial.available()){
     char c = Serial.read();
     switch(c){
+      case 'A':
+        testDirSort();
+        break;
       case 'D':
         printCurDir();
         break;
