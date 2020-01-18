@@ -309,13 +309,28 @@ void printStatus(){
 }
 
 void testSeek(){
-  // don't seek too close to end of file or playback may end
-  uint32_t seekToTime = random(0, (int)playAac1.lengthMillis() * 0.9 / 1000);
-  Serial.print("seeking to ");
-  Serial.println(seekToTime);
-  bool result = playAac1.seek(seekToTime);
-  Serial.print("result: ");
-  Serial.println(result);
+  bool result = false;
+  if(playAac1.isPlaying()){
+    // don't seek too close to end of file or playback may end
+    uint32_t seekToTime = random(0, (int)playAac1.lengthMillis() * 0.9 / 1000);
+    Serial.print("AAC seeking to ");
+    Serial.println(seekToTime);
+    result = playAac1.seek(seekToTime);
+    Serial.print("result: ");
+    Serial.println(result);
+    Serial.print("positionMillis: ");
+    Serial.println(playAac1.positionMillis());
+  }else if(playFlac1.isPlaying()){
+    // don't seek too close to end of file or playback may end
+    uint32_t seekToTime = random(0, (int)playFlac1.lengthMillis() * 0.9 / 1000);
+    Serial.print("FLAC seeking to ");
+    Serial.println(seekToTime);
+    result = playFlac1.seek(seekToTime);
+    Serial.print("result: ");
+    Serial.println(result);
+    Serial.print("positionMillis: ");
+    Serial.println(playFlac1.positionMillis());
+  }
 }
 
 void testDirSort(){
