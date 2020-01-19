@@ -330,6 +330,13 @@ void testSeek(){
     Serial.println(result);
     Serial.print("positionMillis: ");
     Serial.println(playFlac1.positionMillis());
+  }else if(playMp31.isPlaying()){
+    uint32_t seekToTime = random(0, (int)playMp31.lengthMillis() * 0.9 / 1000);
+    Serial.print("MP3 seeking to ");
+    Serial.println(seekToTime);
+    result = playMp31.seek(seekToTime);
+    Serial.print("result: ");
+    Serial.println(result);
   }
 }
 
