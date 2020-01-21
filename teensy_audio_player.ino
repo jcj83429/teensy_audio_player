@@ -305,7 +305,18 @@ void printStatus(){
   Serial.print(", pos: ");
   Serial.print(myCodecFile.fposition());
   Serial.print("/");
-  Serial.println(myCodecFile.fsize());
+  Serial.print(myCodecFile.fsize());
+  if(playMp31.isPlaying()){
+    Serial.print(" mp3 time: ");
+    Serial.print(playMp31.positionMillis());
+  }else if(playAac1.isPlaying()){
+    Serial.print(" aac time: ");
+    Serial.print(playAac1.positionMillis());
+  }else if(playFlac1.isPlaying()){
+    Serial.print(" flac time: ");
+    Serial.print(playFlac1.positionMillis());
+  }
+  Serial.println();
 }
 
 void testSeek(){
