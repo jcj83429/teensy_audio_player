@@ -209,20 +209,26 @@ void printCurDir(){
   }
 }
 
+AudioCodec *getPlayingCodec(){
+  if(playMp31.isPlaying()){
+    return &playMp31;
+  }else if(playAac1.isPlaying()){
+    return &playAac1;
+  }else if(playFlac1.isPlaying()){
+    return &playFlac1;
+  }
+  return NULL;
+}
+
 void playFile(SdBaseFile *file) {
   char tmpFileName[256];
   file->getName(tmpFileName, sizeof(tmpFileName));
   Serial.print("play file: ");
   Serial.println(tmpFileName);
   
-  if(playMp31.isPlaying()){
-    playMp31.stop();
-  }
-  if(playAac1.isPlaying()){
-    playAac1.stop();
-  }
-  if(playFlac1.isPlaying()){
-    playFlac1.stop();
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    playingCodec->stop();
   }
   
   file->rewind();
@@ -306,48 +312,46 @@ void printStatus(){
   Serial.print(myCodecFile.fposition());
   Serial.print("/");
   Serial.print(myCodecFile.fsize());
-  if(playMp31.isPlaying()){
-    Serial.print(" mp3 time: ");
-    Serial.print(playMp31.positionMillis());
-  }else if(playAac1.isPlaying()){
-    Serial.print(" aac time: ");
-    Serial.print(playAac1.positionMillis());
-  }else if(playFlac1.isPlaying()){
-    Serial.print(" flac time: ");
-    Serial.print(playFlac1.positionMillis());
+  
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    Serial.print(" time: ");
+    Serial.print(playingCodec->positionMillis());
+    Serial.print("/");
+    Serial.print(playingCodec->lengthMillis());
   }
+
   Serial.println();
 }
 
+void seekAbsolute(uint32_t timesec){
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    if(timesec > playingCodec->lengthMillis() / 1000){
+      return;
+    }
+    Serial.print("seeking to ");
+    Serial.println(timesec);
+    bool result = playingCodec->seek(timesec);
+    Serial.print("result: ");
+    Serial.println(result);
+    Serial.print("positionMillis: ");
+    Serial.println(playingCodec->positionMillis());
+  }
+}
+
 void testSeek(){
-  bool result = false;
-  if(playAac1.isPlaying()){
-    // don't seek too close to end of file or playback may end
-    uint32_t seekToTime = random(0, (int)playAac1.lengthMillis() * 0.9 / 1000);
-    Serial.print("AAC seeking to ");
-    Serial.println(seekToTime);
-    result = playAac1.seek(seekToTime);
-    Serial.print("result: ");
-    Serial.println(result);
-    Serial.print("positionMillis: ");
-    Serial.println(playAac1.positionMillis());
-  }else if(playFlac1.isPlaying()){
-    // don't seek too close to end of file or playback may end
-    uint32_t seekToTime = random(0, (int)playFlac1.lengthMillis() * 0.9 / 1000);
-    Serial.print("FLAC seeking to ");
-    Serial.println(seekToTime);
-    result = playFlac1.seek(seekToTime);
-    Serial.print("result: ");
-    Serial.println(result);
-    Serial.print("positionMillis: ");
-    Serial.println(playFlac1.positionMillis());
-  }else if(playMp31.isPlaying()){
-    uint32_t seekToTime = random(0, (int)playMp31.lengthMillis() * 0.9 / 1000);
-    Serial.print("MP3 seeking to ");
-    Serial.println(seekToTime);
-    result = playMp31.seek(seekToTime);
-    Serial.print("result: ");
-    Serial.println(result);
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    uint32_t seekToTime = random(0, (int)playingCodec->lengthMillis() * 0.9 / 1000);
+    seekAbsolute(seekToTime);
+  }
+}
+
+void seekRelative(int dtsec){
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    seekAbsolute(playingCodec->positionMillis() / 1000 + dtsec);
   }
 }
 
@@ -452,6 +456,12 @@ void loop() {
         break;
       case 'T':
         testSeek();
+        break;
+      case '>':
+        seekRelative(+5);
+        break;
+      case '<':
+        seekRelative(-5);
         break;
       default:
         Serial.print("unknown cmd ");
