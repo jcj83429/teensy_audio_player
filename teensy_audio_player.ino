@@ -22,23 +22,28 @@ Si5351 si5351;
 
 //////////////////// Teensy Audio library
 // GUItool: begin automatically generated code
-AudioPlaySdMp3           playMp31;     //xy=135.25,237.25
-AudioPlaySdAac           playAac1;     //xy=136.25,186.25
-AudioPlaySdFlac          playFlac1;     //xy=137.25,90.25
-AudioSynthWaveformSine   sine1;          //xy=139.25,135.25
+AudioPlaySdMp3           playMp31;     //xy=100.25,89.25
+AudioPlaySdAac           playAac1;     //xy=110.25,130.25
+AudioPlaySdFlac          playFlac1;     //xy=119.25,173.25
+AudioSynthWaveformSine   sine1;          //xy=150.25,217.25
 AudioMixer4              mixer1;         //xy=371.25,109.25
 AudioMixer4              mixer2;         //xy=371.25,221.25
-AudioOutputI2Sslave      i2sslave1;      //xy=531.25,160.25
-AudioConnection          patchCord5(playMp31, 0, mixer1, 0);
-AudioConnection          patchCord6(playMp31, 1, mixer2, 0);
-AudioConnection          patchCord3(playAac1, 0, mixer1, 2);
-AudioConnection          patchCord4(playAac1, 1, mixer2, 2);
-AudioConnection          patchCord1(playFlac1, 0, mixer1, 3);
-AudioConnection          patchCord2(playFlac1, 1, mixer2, 3);
-AudioConnection          patchCord7(sine1, 0, mixer1, 1);
-AudioConnection          patchCord8(sine1, 0, mixer2, 1);
+AudioOutputI2Sslave      i2sslave1;      //xy=592.25,164.25
+AudioMixer4              mixer3;         //xy=723.25,165.25
+AudioAnalyzeFFT256       fft256_1;       //xy=860.25,165.25
+AudioConnection          patchCord1(playMp31, 0, mixer1, 0);
+AudioConnection          patchCord2(playMp31, 1, mixer2, 0);
+AudioConnection          patchCord3(playAac1, 0, mixer1, 1);
+AudioConnection          patchCord4(playAac1, 1, mixer2, 1);
+AudioConnection          patchCord5(playFlac1, 0, mixer1, 2);
+AudioConnection          patchCord6(playFlac1, 1, mixer2, 2);
+AudioConnection          patchCord7(sine1, 0, mixer1, 3);
+AudioConnection          patchCord8(sine1, 0, mixer2, 3);
 AudioConnection          patchCord9(mixer1, 0, i2sslave1, 0);
-AudioConnection          patchCord10(mixer2, 0, i2sslave1, 1);
+AudioConnection          patchCord10(mixer1, 0, mixer3, 0);
+AudioConnection          patchCord11(mixer2, 0, i2sslave1, 1);
+AudioConnection          patchCord12(mixer2, 0, mixer3, 3);
+AudioConnection          patchCord13(mixer3, fft256_1);
 // GUItool: end automatically generated code
 
 SdFatSdioEX sdEx;
