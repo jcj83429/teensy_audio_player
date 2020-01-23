@@ -125,3 +125,117 @@ void quicksortFiles(SdBaseFile *dir, uint16_t *idxArr, int len) {
   quicksortFiles(dir, idxArr, i);
   quicksortFiles(dir, idxArr + i, len - i);
 }
+
+FileType getFileType(SdBaseFile *file) {
+  if(file->isDir()){
+    return FileType::DIR;
+  }
+
+  // file: check extension
+  char tmpFileName[256];
+  file->getName(tmpFileName, sizeof(tmpFileName));
+  int fnlen = strlen(tmpFileName);
+  
+  if(strcasecmp("mp3", tmpFileName + fnlen - 3) == 0){
+    return FileType::MP3;
+  }
+  if(strcasecmp("aac", tmpFileName + fnlen - 3) == 0 ||
+     strcasecmp("mp4", tmpFileName + fnlen - 3) == 0 ||
+     strcasecmp("m4a", tmpFileName + fnlen - 3) == 0){
+    return FileType::AAC;
+  }
+  if(strcasecmp("flac", tmpFileName + fnlen - 4) == 0){
+    return FileType::FLAC;
+  }
+
+  return FileType::UNSUPPORTED;
+}
+
+char * DirectoryNavigator::curDirFileName(int index) {
+  if(index >= numFiles[dirStackLevel]){
+    return NULL;
+  }
+  return getCachedFileName(curDir(), index);
+}
+
+void DirectoryNavigator::printCurDir() {
+  Serial.print("total files: ");
+  Serial.println(curDirFiles());
+  for(int i=0; i<curDirFiles(); i++){
+    SdBaseFile tmpFile;
+    uint16_t dirFileIdx = sortedFileIdx[dirStackLevel][i];
+    suspendDecoding();
+    tmpFile.open(curDir(), dirFileIdx, O_RDONLY);
+    resumeDecoding();
+    if(i == lastSelectedItem){
+      Serial.print("*");
+    }
+    Serial.print(i);
+    Serial.print("\t");
+    Serial.print(getCachedFileName(curDir(), dirFileIdx));
+    if (tmpFile.isDir()) {
+      Serial.println("/");
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(tmpFile.fileSize(), DEC);
+    }
+  }
+}
+
+SdBaseFile DirectoryNavigator::selectItem(int index) {
+  lastSelectedItem = index;
+  SdBaseFile tmpFile;
+  suspendDecoding();
+  tmpFile.open(curDir(), sortedFileIdx[dirStackLevel][index], O_RDONLY);
+  resumeDecoding();
+  if(tmpFile.isDir()){
+    if(dirStackLevel < MAX_DIR_STACK -1){
+      dirStackLevel++;
+      parentDirIdx[dirStackLevel] = index;
+      dirStack[dirStackLevel] = tmpFile;
+      loadCurDir();
+      lastSelectedItem = 0;
+    }else{
+      //error
+    }
+    return SdBaseFile();
+  }else{
+    return tmpFile;
+  }
+}
+
+void DirectoryNavigator::upDir() {
+  if(dirStackLevel <= 0){
+    return;
+  }
+  lastSelectedItem = parentDirIdx[dirStackLevel];
+  // it's probably not necessary to suspend decoding but whatever
+  suspendDecoding();
+  dirStack[dirStackLevel].close();
+  resumeDecoding();
+  dirStackLevel--;
+}
+
+void DirectoryNavigator::loadCurDir() {
+  int nf = 0;
+  while(nf < MAX_DIR_FILES){
+    SdBaseFile tmpFile;
+    suspendDecoding();
+    if(!tmpFile.openNext(curDir())){
+      resumeDecoding();
+      break;
+    }
+
+    if(getFileType(&tmpFile) == FileType::UNSUPPORTED){
+      resumeDecoding();
+      continue;
+    }
+    sortedFileIdx[dirStackLevel][nf] = tmpFile.dirIndex();
+    nf++;
+    resumeDecoding();
+  }
+  numFiles[dirStackLevel] = nf;
+  
+  quicksortFiles(curDir(), sortedFileIdx[dirStackLevel], nf);
+}

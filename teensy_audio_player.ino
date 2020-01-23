@@ -56,13 +56,7 @@ SdBaseFile currentFile;
 MyCodecFile myCodecFile(NULL);
 int currentFileIndex = -1;
 
-enum FileType {
-  UNSUPPORTED,
-  DIR,
-  MP3,
-  AAC,
-  FLAC,
-};
+DirectoryNavigator dirNav;
 
 // we can't disable the audio interrupt because otherwise the audio output will glitch.
 // so we suspend the decoders' decoding while keeping their outputs running
@@ -110,31 +104,6 @@ void setSampleRate(unsigned long long sampleRate){
   }
   Serial.print("sample rate changed to ");
   Serial.println((int)sampleRate);
-}
-
-FileType getFileType(SdBaseFile *file) {
-  if(file->isDir()){
-    return FileType::DIR;
-  }
-
-  // file: check extension
-  char tmpFileName[256];
-  file->getName(tmpFileName, sizeof(tmpFileName));
-  int fnlen = strlen(tmpFileName);
-  
-  if(strcasecmp("mp3", tmpFileName + fnlen - 3) == 0){
-    return FileType::MP3;
-  }
-  if(strcasecmp("aac", tmpFileName + fnlen - 3) == 0 ||
-     strcasecmp("mp4", tmpFileName + fnlen - 3) == 0 ||
-     strcasecmp("m4a", tmpFileName + fnlen - 3) == 0){
-    return FileType::AAC;
-  }
-  if(strcasecmp("flac", tmpFileName + fnlen - 4) == 0){
-    return FileType::FLAC;
-  }
-
-  return FileType::UNSUPPORTED;
 }
 
 void loadCurDir() {
@@ -230,6 +199,7 @@ int findPlayableFile(int step){
   while(filesTried < numFiles){
     fileIndex = (fileIndex + numFiles + step) % numFiles;
     SdBaseFile tmpFile;
+    // UNSAFE ACCESS. NEED TO SUSPEND DECODING
     tmpFile.open(&curDir, curDirFileIdx[fileIndex], O_RDONLY);
     if(tmpFile.isFile()){
       return fileIndex;
@@ -384,6 +354,8 @@ void setup() {
   curDir.open("/");
   loadCurDir();
 
+  dirNav.openRoot(SdBaseFile::cwd()->volume());
+
   if(numFiles){
     playNext();
   }else{
@@ -397,17 +369,48 @@ void setup() {
 int sampleRates[] = {44100, 88200, 22050};
 int sampleRateIndex = 0;
 
-unsigned long lastStatusTime = 0;
+char strbuf[4] = {0};
 void loop() {
   // put your main code here, to run repeatedly:
   if(Serial.available()){
     char c = Serial.read();
     switch(c){
+      case '\n':
+        break;
       case 'A':
         testDirSort();
         break;
       case 'D':
         printCurDir();
+        break;
+      case 'G':
+        for(int i=0; i<3; ) {
+          if(!Serial.available()) {
+            continue;
+          }
+          char d = Serial.read();
+          if(d == '\n'){
+            strbuf[i] = 0;
+            break;
+          }else if(isdigit(d)){
+            strbuf[i] = d;
+          }else{
+            // invalid
+            Serial.print("invalid digit ");
+            Serial.println(d);
+            return;
+          }
+          i++;
+        }
+        {
+          int itemNum = atoi(strbuf);
+          Serial.print("select item ");
+          Serial.println(itemNum);
+          dirNav.selectItem(itemNum);
+        }
+        break;
+      case 'L':
+        dirNav.printCurDir();
         break;
       case 'N':
         playNext();
@@ -424,6 +427,9 @@ void loop() {
         break;
       case 'T':
         testSeek();
+        break;
+      case 'U':
+        dirNav.upDir();
         break;
       case '>':
         seekRelative(+5);
