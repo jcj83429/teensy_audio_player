@@ -106,46 +106,6 @@ void setSampleRate(unsigned long long sampleRate){
   Serial.println((int)sampleRate);
 }
 
-void loadCurDir() {
-  numFiles = 0;
-
-  while(numFiles < MAX_FILES){
-    SdBaseFile tmpFile;
-    suspendDecoding();
-    if(!tmpFile.openNext(&curDir)){
-      resumeDecoding();
-      break;
-    }
-
-    if(getFileType(&tmpFile) == FileType::UNSUPPORTED){
-      resumeDecoding();
-      continue;
-    }
-    curDirFileIdx[numFiles] = tmpFile.dirIndex();
-    numFiles++;
-    resumeDecoding();
-  }
-
-  quicksortFiles(&curDir, curDirFileIdx, numFiles);
-}
-
-void printCurDir(){
-  Serial.print("total files: ");
-  Serial.println(numFiles);
-  for(int i=0; i<numFiles; i++){
-    SdBaseFile tmpFile;
-    tmpFile.open(&curDir, curDirFileIdx[i], O_RDONLY);
-    Serial.print(getCachedFileName(&curDir, curDirFileIdx[i]));
-    if (tmpFile.isDir()) {
-      Serial.println("/");
-    } else {
-      // files have sizes, directories do not
-      Serial.print("\t\t");
-      Serial.println(tmpFile.fileSize(), DEC);
-    }
-  }
-}
-
 AudioCodec *getPlayingCodec(){
   if(playMp31.isPlaying()){
     return &playMp31;
@@ -193,41 +153,21 @@ void playFile(SdBaseFile *file) {
   Serial.println(error, HEX);
 }
 
-int findPlayableFile(int step){
-  int filesTried = 0;
-  int fileIndex = currentFileIndex;
-  while(filesTried < numFiles){
-    fileIndex = (fileIndex + numFiles + step) % numFiles;
-    SdBaseFile tmpFile;
-    // UNSAFE ACCESS. NEED TO SUSPEND DECODING
-    tmpFile.open(&curDir, curDirFileIdx[fileIndex], O_RDONLY);
-    if(tmpFile.isFile()){
-      return fileIndex;
-    }
-    filesTried++;
-  }
-  return -1;
-}
-
 void playNext(){
-  int newFileIndex = findPlayableFile(1);
-  if(newFileIndex < 0){
-    Serial.println("no playable file");
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    playingCodec->stop();
   }
-  currentFileIndex = newFileIndex;
-  currentFile.close();
-  currentFile.open(&curDir, curDirFileIdx[currentFileIndex], O_RDONLY);
+  currentFile = dirNav.nextFile();
   playFile(&currentFile);
 }
 
 void playPrev(){
-  int newFileIndex = findPlayableFile(-1);
-  if(newFileIndex < 0){
-    Serial.println("no playable file");
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    playingCodec->stop();
   }
-  currentFileIndex = newFileIndex;
-  currentFile.close();
-  currentFile.open(&curDir, curDirFileIdx[currentFileIndex], O_RDONLY);
+  currentFile = dirNav.prevFile();
   playFile(&currentFile);
 }
 
@@ -293,22 +233,6 @@ void seekRelative(int dtsec){
   }
 }
 
-void testDirSort(){
-  cacheTime = cacheSearchTime = 0;
-  suspendDecoding();
-  curDir.close();
-  curDir.open("www.saturn-global.com_david 80s music collection");
-  resumeDecoding();
-  unsigned long long startTime = micros();
-  loadCurDir();
-  Serial.print("took ");
-  Serial.println((int)(micros() - startTime));
-  Serial.print("cache took ");
-  Serial.println((int)cacheTime);
-  Serial.print("cache search took ");
-  Serial.println((int)cacheSearchTime);
-}
-
 void setup() {
   Serial.begin(115200);
   delay(100);
@@ -350,13 +274,9 @@ void setup() {
 
   // sdEx.ls(LS_R | LS_DATE | LS_SIZE);
 
-  // populate curDirFiles with files in root. Directories are not supported yet
-  curDir.open("/");
-  loadCurDir();
-
   dirNav.openRoot(SdBaseFile::cwd()->volume());
 
-  if(numFiles){
+  if(dirNav.curDirFiles()){
     playNext();
   }else{
     while(true){
@@ -376,12 +296,6 @@ void loop() {
     char c = Serial.read();
     switch(c){
       case '\n':
-        break;
-      case 'A':
-        testDirSort();
-        break;
-      case 'D':
-        printCurDir();
         break;
       case 'G':
         for(int i=0; i<3; ) {

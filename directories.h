@@ -29,13 +29,15 @@ public:
     loadCurDir();
   }
 
-  int lastSelectedItem = 0; // for convenience. we update it when doing upDir.
+  int lastSelectedItem = -1; // for convenience. we update it when doing upDir.
 
   SdBaseFile *curDir() { return &dirStack[dirStackLevel]; }
   int curDirFiles() { return numFiles[dirStackLevel]; }
   char *curDirFileName(int index); // fast access through cache
   void printCurDir();
   SdBaseFile selectItem(int index); // For file, open file in ret. For dir, return SdBaseFile()
+  SdBaseFile nextFile();
+  SdBaseFile prevFile();
   void upDir();
 
 //protected:

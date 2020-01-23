@@ -195,7 +195,7 @@ SdBaseFile DirectoryNavigator::selectItem(int index) {
       parentDirIdx[dirStackLevel] = index;
       dirStack[dirStackLevel] = tmpFile;
       loadCurDir();
-      lastSelectedItem = 0;
+      lastSelectedItem = -1;
     }else{
       //error
     }
@@ -203,6 +203,55 @@ SdBaseFile DirectoryNavigator::selectItem(int index) {
   }else{
     return tmpFile;
   }
+}
+
+SdBaseFile DirectoryNavigator::nextFile() {
+  SdBaseFile ret;
+  while(!ret.isOpen()){
+    if(lastSelectedItem >= curDirFiles() - 1){
+      // end of current dir
+      if(dirStackLevel > 0){
+        upDir();
+        continue;
+      }else{
+        if(curDirFiles()){
+          // if we're at root, we can't go up. so start from beginning again.
+          lastSelectedItem = -1;
+        }else{
+          // no files at root
+          return ret;
+        }
+      }
+    }
+    ret = selectItem(lastSelectedItem + 1);
+  }
+  return ret;
+}
+
+SdBaseFile DirectoryNavigator::prevFile() {
+  SdBaseFile ret;
+  while(!ret.isOpen()){
+    if(lastSelectedItem <= 0){
+      if(dirStackLevel > 0){
+        upDir();
+        continue;
+      }else{
+        if(curDirFiles()){
+          lastSelectedItem = curDirFiles();
+        }else{
+          // no files at root
+          return ret;
+        }
+      }
+    }
+    ret = selectItem(lastSelectedItem - 1);
+    if(!ret.isOpen()){
+      // normally we set lastSelectedItem when we go into a dir
+      // but we want to go in reverse so set it to curDirFiles()
+      lastSelectedItem = curDirFiles();
+    }
+  }
+  return ret;
 }
 
 void DirectoryNavigator::upDir() {
@@ -218,6 +267,7 @@ void DirectoryNavigator::upDir() {
 }
 
 void DirectoryNavigator::loadCurDir() {
+  unsigned long long startTime = micros();
   int nf = 0;
   while(nf < MAX_DIR_FILES){
     SdBaseFile tmpFile;
@@ -238,4 +288,6 @@ void DirectoryNavigator::loadCurDir() {
   numFiles[dirStackLevel] = nf;
   
   quicksortFiles(curDir(), sortedFileIdx[dirStackLevel], nf);
+  Serial.print("dir load took ");
+  Serial.println((int)(micros() - startTime));
 }
