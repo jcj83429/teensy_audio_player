@@ -117,16 +117,20 @@ AudioCodec *getPlayingCodec(){
   return NULL;
 }
 
+void stop(){
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    playingCodec->stop();
+  }
+}
+
 void playFile(SdBaseFile *file) {
   char tmpFileName[256];
   file->getName(tmpFileName, sizeof(tmpFileName));
   Serial.print("play file: ");
   Serial.println(tmpFileName);
   
-  AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
-    playingCodec->stop();
-  }
+  stop();
   
   file->rewind();
   myCodecFile = MyCodecFile(file);
@@ -154,19 +158,13 @@ void playFile(SdBaseFile *file) {
 }
 
 void playNext(){
-  AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
-    playingCodec->stop();
-  }
+  stop();
   currentFile = dirNav.nextFile();
   playFile(&currentFile);
 }
 
 void playPrev(){
-  AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
-    playingCodec->stop();
-  }
+  stop();
   currentFile = dirNav.prevFile();
   playFile(&currentFile);
 }
@@ -320,7 +318,12 @@ void loop() {
           int itemNum = atoi(strbuf);
           Serial.print("select item ");
           Serial.println(itemNum);
-          dirNav.selectItem(itemNum);
+          SdBaseFile tmpFile = dirNav.selectItem(itemNum);
+          if(tmpFile.isOpen()){
+            stop();
+            currentFile = tmpFile;
+            playFile(&currentFile);
+          }
         }
         break;
       case 'L':
@@ -355,6 +358,10 @@ void loop() {
         Serial.print("unknown cmd ");
         Serial.println(c);
         break;
+    }
+  }else{
+    if(dirNav.curDirFiles() && !getPlayingCodec()){
+      playNext();
     }
   }
 }
