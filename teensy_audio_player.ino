@@ -4,6 +4,8 @@
 #include <SPI.h>
 #include <SerialFlash.h>
 #include "si5351.h"
+#include "vfd.h"
+#include "font.h"
 #include <play_sd_mp3.h>
 #include <play_sd_aac.h>
 #include <play_sd_flac.h>
@@ -17,8 +19,12 @@
 
 #define MAX_FILES 256
 
+#define USE_I2S_SLAVE 0
+
+#if USE_I2S_SLAVE
 //////////////////// I2S clock generator
 Si5351 si5351;
+#endif
 
 //////////////////// Teensy Audio library
 // GUItool: begin automatically generated code
@@ -28,7 +34,11 @@ AudioPlaySdFlac          playFlac1;     //xy=119.25,173.25
 AudioSynthWaveformSine   sine1;          //xy=150.25,217.25
 AudioMixer4              mixer1;         //xy=371.25,109.25
 AudioMixer4              mixer2;         //xy=371.25,221.25
-AudioOutputI2Sslave      i2sslave1;      //xy=592.25,164.25
+#if USE_I2S_SLAVE
+AudioOutputI2Sslave      i2s1;           //xy=592.25,164.25
+#else
+AudioOutputI2S           i2s1;           //xy=592.25,164.25
+#endif
 AudioMixer4              mixer3;         //xy=723.25,165.25
 AudioAnalyzeFFT256       fft256_1;       //xy=860.25,165.25
 AudioConnection          patchCord1(playMp31, 0, mixer1, 0);
@@ -39,9 +49,9 @@ AudioConnection          patchCord5(playFlac1, 0, mixer1, 2);
 AudioConnection          patchCord6(playFlac1, 1, mixer2, 2);
 AudioConnection          patchCord7(sine1, 0, mixer1, 3);
 AudioConnection          patchCord8(sine1, 0, mixer2, 3);
-AudioConnection          patchCord9(mixer1, 0, i2sslave1, 0);
+AudioConnection          patchCord9(mixer1, 0, i2s1, 0);
 AudioConnection          patchCord10(mixer1, 0, mixer3, 0);
-AudioConnection          patchCord11(mixer2, 0, i2sslave1, 1);
+AudioConnection          patchCord11(mixer2, 0, i2s1, 1);
 AudioConnection          patchCord12(mixer2, 0, mixer3, 3);
 AudioConnection          patchCord13(mixer3, fft256_1);
 // GUItool: end automatically generated code
@@ -84,6 +94,7 @@ void resumeDecoding(){
 }
 
 void setSampleRate(unsigned long long sampleRate){
+#if USE_I2S_SLAVE
   uint8_t error;
   // sometimes the sample rate setting doens't go through, so repeate 3 times
   for(int i=0; i<3; i++){
@@ -104,6 +115,8 @@ void setSampleRate(unsigned long long sampleRate){
   }
   Serial.print("sample rate changed to ");
   Serial.println((int)sampleRate);
+#endif
+  // sample rate change for master needs to be implemented
 }
 
 AudioCodec *getPlayingCodec(){
@@ -237,13 +250,68 @@ void setup() {
 
   pinMode(LED_PIN, OUTPUT);
 
+///// AUDIO
   // put your setup code here, to run once:
   AudioMemory(20);
+
+  // mix L+R for FFT
+  mixer3.gain(0, 0.5);
+  mixer3.gain(3, 0.5);
 
   // FOR DAC SANITY
   // sine1.amplitude(0.20);
   // sine1.frequency(1000);
 
+///// END AUDIO
+
+///// VFD
+  // SS and CMD/DATA pin modes will be overwritten by CORE_PIN*_CONFIG below
+  pinMode(PIN_VFD_SS, OUTPUT);
+  pinMode(PIN_VFD_CMD_DATA, OUTPUT);
+  pinMode(PIN_VFD_RST, OUTPUT);
+  pinMode(PIN_VFD_FRP, INPUT);
+  digitalWrite(PIN_VFD_RST, LOW);
+  delay(1);
+  digitalWrite(PIN_VFD_RST, HIGH);
+
+  SPI.begin();
+
+  // set SPI mode once and never touch it again
+  SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
+  SPI.endTransaction();
+
+  DUMPVAL(SPI0_CTAR0);
+  DUMPVAL(SPI0_PUSHR);
+  SPI0_CTAR0 &= ~(SPI_CTAR_ASC(0xf));
+  // set up SPI delay params to meet timing requirements of the VFD
+  SPI0_CTAR0 |= SPI_CTAR_CSSCK(1) | SPI_CTAR_PASC(1) | SPI_CTAR_ASC(1) | SPI_CTAR_DT(1);
+  DUMPVAL(SPI0_CTAR0);
+  DUMPVAL(SPI0_PUSHR);
+
+#if USE_HW_CS
+  CORE_PIN10_CONFIG = PORT_PCR_MUX(2); // pin 10 = PTC4 = SPI0_PCS0
+  CORE_PIN6_CONFIG = PORT_PCR_MUX(2); // pin 6 = PTD4 = SPI0_PCS1
+#endif
+
+  vfdInit();
+
+  // Set brightness to min. VFD draws too much power for USB
+  vfdSend(0x4f, true);
+
+  Serial.println("VFD init done");
+
+  vfdSetAutoInc(1, 0);
+
+  for(int i=0; i<6; i++) {
+    vfdSetCursor(0, i + 2);
+    for(int j = 0; j < 96; j++) {
+      vfdSend(ms_6x8_font[0x20 + 16*i + j/6][j%6], false);
+    }
+  }
+
+///// END VFD
+
+#if USE_I2S_SLAVE
   // si5351 setup
   bool si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
   if(si5351_found){
@@ -254,7 +322,13 @@ void setup() {
       flashError(1);
     }
   }
+#endif
+
   setSampleRate(44100);
+
+///// END AUDIO
+
+///// SD CARD
 
   if (!sdEx.begin()) {
     while(1){
@@ -264,6 +338,8 @@ void setup() {
   } else {
     Serial.println("SD init success");
   }
+
+///// END SD CARD
 
   Serial.println("ALL INIT DONE!");
   
@@ -294,6 +370,11 @@ void loop() {
     char c = Serial.read();
     switch(c){
       case '\n':
+        break;
+      case 'F':
+        for(int i=0 ;i<128; i++){
+          Serial.println(fft256_1.output[i]);
+        }
         break;
       case 'G':
         for(int i=0; i<3; ) {
@@ -359,9 +440,27 @@ void loop() {
         Serial.println(c);
         break;
     }
-  }else{
-    if(dirNav.curDirFiles() && !getPlayingCodec()){
-      playNext();
-    }
+    return;
   }
+  
+  if(dirNav.curDirFiles() && !getPlayingCodec()){
+    playNext();
+  }
+
+  for(int i=0 ;i<128; i++){
+    uint16_t fftBin = fft256_1.output[i];
+    uint32_t fftBinLog = fftBin ? (32 - __builtin_clz((uint32_t)fftBin)) : 0;
+    uint32_t lsb = 0;
+    if(fftBinLog > 1){
+      // use the bit after the leading bit to add an approximate bit to the log
+      lsb = (fftBin >> (fftBinLog - 2)) & 1;
+    }
+    fftBinLog = (fftBinLog << 1) | lsb;
+    uint32_t fftBinLogMask = fftBinLog ? (0x1 << (32 - fftBinLog)) : 0;
+    framebuffer[0][i] = fftBinLogMask;
+    framebuffer[1][i] = fftBinLogMask >> 8;
+    framebuffer[2][i] = fftBinLogMask >> 16;
+    framebuffer[3][i] = fftBinLogMask >> 24;
+  }
+  vfdWriteFb(0);
 }
