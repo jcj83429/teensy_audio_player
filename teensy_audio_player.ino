@@ -6,12 +6,18 @@
 #include "si5351.h"
 #include "vfd.h"
 #include "font.h"
+#include "ui.h"
 #include <play_sd_mp3.h>
 #include <play_sd_aac.h>
 #include <play_sd_flac.h>
 
 #include "mycodecfile.cpp"
 #include "directories.h"
+
+// I2S wiring
+// LRCLK = 23
+// DOUT = 22
+// BCLK = 9
 
 // Use these with the Teensy 3.5 & 3.6 SD card
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
@@ -58,15 +64,15 @@ AudioConnection          patchCord13(mixer3, fft256_1);
 
 SdFatSdioEX sdEx;
 
-SdBaseFile curDir;
-int numFiles = 0;
-uint16_t curDirFileIdx[MAX_FILES];
-
 SdBaseFile currentFile;
 MyCodecFile myCodecFile(NULL);
 int currentFileIndex = -1;
+bool isPaused = false;
 
 DirectoryNavigator dirNav;
+
+int sampleRates[] = {44100, 88200, 22050};
+int sampleRateIndex = 0;
 
 // we can't disable the audio interrupt because otherwise the audio output will glitch.
 // so we suspend the decoders' decoding while keeping their outputs running
@@ -168,6 +174,7 @@ void playFile(SdBaseFile *file) {
 
   Serial.print("error: 0x");
   Serial.println(error, HEX);
+  isPaused = false;
 }
 
 void playNext() {
@@ -180,6 +187,14 @@ void playPrev() {
   stop();
   currentFile = dirNav.prevFile();
   playFile(&currentFile);
+}
+
+void togglePause() {
+  AudioCodec *playingCodec = getPlayingCodec();
+  if (playingCodec) {
+    isPaused = !isPaused;
+    playingCodec->pause(isPaused);
+  }
 }
 
 void flashError(int error) {
@@ -244,11 +259,115 @@ void seekRelative(int dtsec) {
   }
 }
 
+bool doSerialControl(){
+  char strbuf[4] = {0};
+  if (Serial.available()) {
+    char c = Serial.read();
+    switch (c) {
+      case '\n':
+        break;
+      case 'F':
+        for (int i = 0 ; i < 128; i++) {
+          Serial.println(fft256_1.output[i]);
+        }
+        break;
+      case 'G':
+        for (int i = 0; i < 3; ) {
+          if (!Serial.available()) {
+            continue;
+          }
+          char d = Serial.read();
+          if (d == '\n') {
+            strbuf[i] = 0;
+            break;
+          } else if (isdigit(d)) {
+            strbuf[i] = d;
+          } else {
+            // invalid
+            Serial.print("invalid digit ");
+            Serial.println(d);
+            return false;
+          }
+          i++;
+        }
+        {
+          int itemNum = atoi(strbuf);
+          Serial.print("select item ");
+          Serial.println(itemNum);
+          SdBaseFile tmpFile = dirNav.selectItem(itemNum);
+          if (tmpFile.isOpen()) {
+            stop();
+            currentFile = tmpFile;
+            playFile(&currentFile);
+          }
+        }
+        break;
+      case 'I':
+        togglePause();
+        break;
+      case 'L':
+        dirNav.printCurDir();
+        break;
+      case 'N':
+        playNext();
+        break;
+      case 'P':
+        playPrev();
+        break;
+      case 'R':
+        sampleRateIndex = (sampleRateIndex + 1) % 3;
+        setSampleRate(sampleRates[sampleRateIndex]);
+        break;
+      case 'S':
+        printStatus();
+        break;
+      case 'T':
+        testSeek();
+        break;
+      case 'U':
+        dirNav.upDir();
+        break;
+      case '>':
+        seekRelative(+5);
+        break;
+      case '<':
+        seekRelative(-5);
+        break;
+      default:
+        Serial.print("unknown cmd ");
+        Serial.println(c);
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool doKeyControl(){
+  if(keys[KEY_PLAY].event == KEY_EV_DOWN){
+    togglePause();
+    return true;
+  }
+  if(keys[KEY_PREV].event == KEY_EV_DOWN){
+    playPrev();
+    return true;
+  }
+  if(keys[KEY_NEXT].event == KEY_EV_DOWN){
+    playNext();
+    return true;
+  }
+  return false;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(100);
+  //while(!Serial);
 
   pinMode(LED_PIN, OUTPUT);
+  pinMode(PIN_KEY_PLAY, INPUT_PULLDOWN);
+  pinMode(PIN_KEY_NEXT, INPUT_PULLDOWN);
+  pinMode(PIN_KEY_PREV, INPUT_PULLDOWN);
 
 ///// AUDIO
   // put your setup code here, to run once:
@@ -371,86 +490,13 @@ void setup() {
   }
 }
 
-int sampleRates[] = {44100, 88200, 22050};
-int sampleRateIndex = 0;
-
-char strbuf[4] = {0};
 void loop() {
-  // put your main code here, to run repeatedly:
-  if (Serial.available()) {
-    char c = Serial.read();
-    switch (c) {
-      case '\n':
-        break;
-      case 'F':
-        for (int i = 0 ; i < 128; i++) {
-          Serial.println(fft256_1.output[i]);
-        }
-        break;
-      case 'G':
-        for (int i = 0; i < 3; ) {
-          if (!Serial.available()) {
-            continue;
-          }
-          char d = Serial.read();
-          if (d == '\n') {
-            strbuf[i] = 0;
-            break;
-          } else if (isdigit(d)) {
-            strbuf[i] = d;
-          } else {
-            // invalid
-            Serial.print("invalid digit ");
-            Serial.println(d);
-            return;
-          }
-          i++;
-        }
-        {
-          int itemNum = atoi(strbuf);
-          Serial.print("select item ");
-          Serial.println(itemNum);
-          SdBaseFile tmpFile = dirNav.selectItem(itemNum);
-          if (tmpFile.isOpen()) {
-            stop();
-            currentFile = tmpFile;
-            playFile(&currentFile);
-          }
-        }
-        break;
-      case 'L':
-        dirNav.printCurDir();
-        break;
-      case 'N':
-        playNext();
-        break;
-      case 'P':
-        playPrev();
-        break;
-      case 'R':
-        sampleRateIndex = (sampleRateIndex + 1) % 3;
-        setSampleRate(sampleRates[sampleRateIndex]);
-        break;
-      case 'S':
-        printStatus();
-        break;
-      case 'T':
-        testSeek();
-        break;
-      case 'U':
-        dirNav.upDir();
-        break;
-      case '>':
-        seekRelative(+5);
-        break;
-      case '<':
-        seekRelative(-5);
-        break;
-      default:
-        Serial.print("unknown cmd ");
-        Serial.println(c);
-        break;
-    }
+  if(doSerialControl()){
+    return;
+  }
+
+  updateKeyStates();
+  if(doKeyControl()){
     return;
   }
 
