@@ -1,3 +1,6 @@
+#ifndef DIRECTORIES_H
+#define DIRECTORIES_H
+
 #include "SdFat.h"
 
 #define FILE_NAME_MAX_LEN 256
@@ -49,3 +52,5 @@ public:
 
   void loadCurDir();
 };
+
+#endif

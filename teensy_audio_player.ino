@@ -146,34 +146,10 @@ bool doSerialControl(){
   return false;
 }
 
-bool doKeyControl(){
-  if(keys[KEY_PLAY].event == KEY_EV_DOWN){
-    togglePause();
-    return true;
-  }
-  if(keys[KEY_PREV].event == KEY_EV_DOWN){
-    playPrev();
-    return true;
-  }
-  if(keys[KEY_NEXT].event == KEY_EV_DOWN){
-    playNext();
-    return true;
-  }
-  if(keys[KEY_RWD].event == KEY_EV_DOWN){
-    seekRelative(-5);
-    return true;
-  }
-  if(keys[KEY_FF].event == KEY_EV_DOWN){
-    seekRelative(+5);
-    return true;
-  }
-  return false;
-}
-
 void setup() {
   Serial.begin(115200);
   delay(100);
-  while(!Serial);
+  //while(!Serial);
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -311,57 +287,11 @@ void loop() {
     return;
   }
 
-  updateKeyStates();
-  if(doKeyControl()){
-    return;
-  }
-
   if (dirNav.curDirFiles() && !getPlayingCodec()) {
     playNext();
   }
 
-  // row 0-3: spectrum
-  for (int i = 0 ; i < 128; i++) {
-    uint16_t fftBin = fft256_1.output[i];
-    uint32_t fftBinLog = fftBin ? (32 - __builtin_clz((uint32_t)fftBin)) : 0;
-    uint32_t lsb = 0;
-    if (fftBinLog > 1) {
-      // use the bit after the leading bit to add an approximate bit to the log
-      lsb = (fftBin >> (fftBinLog - 2)) & 1;
-    }
-    fftBinLog = (fftBinLog << 1) | lsb;
-    uint32_t fftBinLogMask = fftBinLog ? (0x1 << (32 - fftBinLog)) : 0;
-    framebuffer[0][i] = fftBinLogMask;
-    framebuffer[1][i] = fftBinLogMask >> 8;
-    framebuffer[2][i] = fftBinLogMask >> 16;
-    framebuffer[3][i] = fftBinLogMask >> 24;
-  }
+  uiUpdate();
 
-  // clear row 4-7
-  for (int i = 0; i < 128; i++) {
-    for (int j = 4; j < 8; j++) {
-      framebuffer[j][i] = 0;
-    }
-  }
-
-  // row 4-6: file name
-  for (int j = 0; j < 3; j++) {
-    for (int i = 0; i < 21; i++) {
-      char c = currentFileName[21*j + i];
-      if(c == 0){
-        goto filenameend;
-      }
-      printChar(c, i * 6, j + 4);
-    }
-  }
-filenameend:
-
-  AudioCodec *playingCodec = getPlayingCodec();
-  if (playingCodec) {
-    printTime(playingCodec->lengthMillis() / 1000, 128 - 5 * 6, 7);
-    printChar('/', 128 - 6 * 6, 7);
-    printTime(playingCodec->positionMillis() / 1000, 128 - 11 * 6, 7);
-  }
-  
   vfdWriteFb(0);
 }

@@ -21,6 +21,12 @@ typedef enum KeyEvent {
   KEY_EV_UP,
 } KeyEvent;
 
+typedef enum UiMode {
+  UI_MODE_INVALID,
+  UI_MODE_MAIN,
+  UI_MODE_FILES,
+} UiMode;
+
 struct KeyInfo {
   int pin;
   KeyEvent event;
@@ -35,3 +41,21 @@ void updateKeyStates();
 void printChar(char c, int x, int y);
 void printNum(int n, int digits, int x, int y);
 void printTime(int timesec, int x, int y);
+void uiUpdate();
+
+class UiModeBase {
+public:
+  virtual ~UiModeBase() {};
+  // process key events, update framebuffer, and return next UiMode
+  virtual UiMode update() = 0;
+};
+
+class UiModeMain : public UiModeBase {
+public:
+  UiMode update();
+};
+
+class UiModeFiles : public UiModeBase {
+public:
+  UiMode update();
+};
