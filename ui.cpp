@@ -4,13 +4,6 @@
 #define DEBOUNCE_TIME 20
 
 struct KeyInfo keys[] = {
-  [KEY_PLAY] = {
-    .pin = PIN_KEY_PLAY,
-    .event = KEY_EV_NONE,
-    .lastState = 0,
-    .lastChangeTime = 0,
-    .lastEventTime = 0,
-  },
   [KEY_PREV] = {
     .pin = PIN_KEY_PREV,
     .event = KEY_EV_NONE,
@@ -18,8 +11,36 @@ struct KeyInfo keys[] = {
     .lastChangeTime = 0,
     .lastEventTime = 0,
   },
+  [KEY_RWD] = {
+    .pin = PIN_KEY_RWD,
+    .event = KEY_EV_NONE,
+    .lastState = 0,
+    .lastChangeTime = 0,
+    .lastEventTime = 0,
+  },
+  [KEY_PLAY] = {
+    .pin = PIN_KEY_PLAY,
+    .event = KEY_EV_NONE,
+    .lastState = 0,
+    .lastChangeTime = 0,
+    .lastEventTime = 0,
+  },
+  [KEY_FF] = {
+    .pin = PIN_KEY_FF,
+    .event = KEY_EV_NONE,
+    .lastState = 0,
+    .lastChangeTime = 0,
+    .lastEventTime = 0,
+  },
   [KEY_NEXT] = {
     .pin = PIN_KEY_NEXT,
+    .event = KEY_EV_NONE,
+    .lastState = 0,
+    .lastChangeTime = 0,
+    .lastEventTime = 0,
+  },
+  [KEY_FN1] = {
+    .pin = PIN_KEY_FN1,
     .event = KEY_EV_NONE,
     .lastState = 0,
     .lastChangeTime = 0,
@@ -40,7 +61,7 @@ void updateKeyStates(){
     }
 
     if(keys[keyId].lastChangeTime - now > DEBOUNCE_TIME && keys[keyId].lastEventTime < keys[keyId].lastChangeTime){
-      keys[keyId].event = newState ? KEY_EV_DOWN : KEY_EV_UP;
+      keys[keyId].event = newState ? KEY_EV_UP : KEY_EV_DOWN;
       keys[keyId].lastEventTime = now;
       Serial.print("KEY ");
       Serial.print(keyId);

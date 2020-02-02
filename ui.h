@@ -1,11 +1,17 @@
-#define PIN_KEY_PLAY 25
 #define PIN_KEY_PREV 24
-#define PIN_KEY_NEXT 26
+#define PIN_KEY_RWD  25
+#define PIN_KEY_PLAY 26
+#define PIN_KEY_FF   27
+#define PIN_KEY_NEXT 7
+#define PIN_KEY_FN1 8
 
 enum KeyId {
-  KEY_PLAY,
   KEY_PREV,
+  KEY_RWD,
+  KEY_PLAY,
+  KEY_FF,
   KEY_NEXT,
+  KEY_FN1,
   NUM_KEYS,
 };
 

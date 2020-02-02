@@ -356,18 +356,30 @@ bool doKeyControl(){
     playNext();
     return true;
   }
+  if(keys[KEY_RWD].event == KEY_EV_DOWN){
+    seekRelative(-5);
+    return true;
+  }
+  if(keys[KEY_FF].event == KEY_EV_DOWN){
+    seekRelative(+5);
+    return true;
+  }
   return false;
 }
 
 void setup() {
   Serial.begin(115200);
   delay(100);
-  //while(!Serial);
+  while(!Serial);
 
   pinMode(LED_PIN, OUTPUT);
-  pinMode(PIN_KEY_PLAY, INPUT_PULLDOWN);
-  pinMode(PIN_KEY_NEXT, INPUT_PULLDOWN);
-  pinMode(PIN_KEY_PREV, INPUT_PULLDOWN);
+
+  pinMode(PIN_KEY_RWD, INPUT_PULLUP);
+  pinMode(PIN_KEY_PREV, INPUT_PULLUP);
+  pinMode(PIN_KEY_PLAY, INPUT_PULLUP);
+  pinMode(PIN_KEY_FF, INPUT_PULLUP);
+  pinMode(PIN_KEY_NEXT, INPUT_PULLUP);
+  pinMode(PIN_KEY_FN1, INPUT_PULLUP);
 
 ///// AUDIO
   // put your setup code here, to run once:
