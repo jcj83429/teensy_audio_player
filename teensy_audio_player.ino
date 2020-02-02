@@ -65,6 +65,7 @@ AudioConnection          patchCord13(mixer3, fft256_1);
 SdFatSdioEX sdEx;
 
 SdBaseFile currentFile;
+char currentFileName[256];
 MyCodecFile myCodecFile(NULL);
 int currentFileIndex = -1;
 bool isPaused = false;
@@ -144,10 +145,9 @@ void stop() {
 }
 
 void playFile(SdBaseFile *file) {
-  char tmpFileName[256];
-  file->getName(tmpFileName, sizeof(tmpFileName));
+  file->getName(currentFileName, sizeof(currentFileName));
   Serial.print("play file: ");
-  Serial.println(tmpFileName);
+  Serial.println(currentFileName);
 
   stop();
 
@@ -503,6 +503,7 @@ void setup() {
 }
 
 void loop() {
+
   if(doSerialControl()){
     return;
   }
@@ -516,7 +517,7 @@ void loop() {
     playNext();
   }
 
-  // spectrum on top half of the screen
+  // row 0-3: spectrum
   for (int i = 0 ; i < 128; i++) {
     uint16_t fftBin = fft256_1.output[i];
     uint32_t fftBinLog = fftBin ? (32 - __builtin_clz((uint32_t)fftBin)) : 0;
@@ -532,16 +533,32 @@ void loop() {
     framebuffer[2][i] = fftBinLogMask >> 16;
     framebuffer[3][i] = fftBinLogMask >> 24;
   }
-  // snow on bottom half of the screen for stress testing
+
+  // clear row 4-7
   for (int i = 0; i < 128; i++) {
     for (int j = 4; j < 8; j++) {
       framebuffer[j][i] = 0;
-      for (int k = 0; k < 8; k++) {
-        if (random(8) == 0) {
-          framebuffer[j][i] |= 1 << k;
-        }
-      }
     }
   }
+
+  // row 4-6: file name
+  for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < 21; i++) {
+      char c = currentFileName[21*j + i];
+      if(c == 0){
+        goto filenameend;
+      }
+      printChar(c, i * 6, j + 4);
+    }
+  }
+filenameend:
+
+  AudioCodec *playingCodec = getPlayingCodec();
+  if (playingCodec) {
+    printTime(playingCodec->lengthMillis() / 1000, 128 - 5 * 6, 7);
+    printChar('/', 128 - 6 * 6, 7);
+    printTime(playingCodec->positionMillis() / 1000, 128 - 11 * 6, 7);
+  }
+  
   vfdWriteFb(0);
 }

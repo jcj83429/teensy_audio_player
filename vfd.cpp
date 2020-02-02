@@ -1,8 +1,6 @@
 #include <SPI.h>
 #include "vfd.h"
 
-extern const uint8_t ms_6x8_font[256][6];
-
 uint8_t framebuffer[8][128];
 
 void vfdSend(uint8_t value, bool isCommand) {

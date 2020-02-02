@@ -1,7 +1,9 @@
 #include "ui.h"
+#include "vfd.h"
+#include "font.h"
 #include <Arduino.h>
 
-#define DEBOUNCE_TIME 20
+#define DEBOUNCE_TIME 50
 
 struct KeyInfo keys[] = {
   [KEY_PREV] = {
@@ -71,4 +73,33 @@ void updateKeyStates(){
       keys[keyId].event = KEY_EV_NONE;
     }
   }
+}
+
+void printChar(char c, int x, int y){
+  for(int i=0; i<6; i++){
+    framebuffer[y][x + i] = ms_6x8_font[(int)c][i];
+  }
+}
+
+void printNum(int n, int digits, int x, int y){
+  x += (digits - 1) * 6;
+  for(int i = 0; i < digits; i++){
+    char c = '0' + n % 10;
+    printChar(c, x, y);
+    x -= 6;
+    n /= 10;
+  }
+}
+
+void printTime(int timesec, int x, int y){
+  if (timesec > 5999) {
+    // can only display up to 99:99
+    timesec = 5999;
+  }
+  int mins = timesec / 60;
+  int secs = timesec % 60;
+
+  printNum(mins, 2, x, y);
+  printChar(':', x + 12, y);
+  printNum(secs, 2, x + 18, y);
 }

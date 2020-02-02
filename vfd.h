@@ -1,3 +1,4 @@
+#include <stdint.h>
 // teensy 3.6
 // SS and CMD/DATA are controlled by HW SPI CS
 #define PIN_VFD_SS 10
