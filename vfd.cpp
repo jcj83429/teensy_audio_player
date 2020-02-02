@@ -15,10 +15,11 @@ void vfdSend(uint8_t value, bool isCommand) {
   while (!(SPI0_SR & SPI_SR_TCF));
   SPI0_SR = SPI_SR_TCF;
 #else
-  digitalWrite(PIN_VFD_CMD_DATA, isCommand);
-  digitalWrite(PIN_VFD_SS, LOW);
+  digitalWriteFast(PIN_VFD_CMD_DATA, isCommand);
+  digitalWriteFast(PIN_VFD_SS, LOW);
   SPI.transfer(value);
-  digitalWrite(PIN_VFD_SS, HIGH);
+  digitalWriteFast(PIN_VFD_SS, HIGH);
+  digitalWriteFast(PIN_VFD_CMD_DATA, HIGH);
 #endif
 }
 

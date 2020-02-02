@@ -70,44 +70,44 @@ DirectoryNavigator dirNav;
 
 // we can't disable the audio interrupt because otherwise the audio output will glitch.
 // so we suspend the decoders' decoding while keeping their outputs running
-void suspendDecoding(){
+void suspendDecoding() {
   // for MP3 and AAC, just disable the ISR
-  if(playMp31.isPlaying() || playAac1.isPlaying()){
+  if (playMp31.isPlaying() || playAac1.isPlaying()) {
     NVIC_DISABLE_IRQ(IRQ_AUDIOCODEC);
   }
   // for FLAC, use the suspend/resumeDecoding interface
-  if(playFlac1.isPlaying()){
+  if (playFlac1.isPlaying()) {
     playFlac1.suspendDecoding();
   }
 }
 
-void resumeDecoding(){
+void resumeDecoding() {
   // for MP3 and AAC, just enable and trigger the ISR
-  if(playMp31.isPlaying() || playAac1.isPlaying()){
+  if (playMp31.isPlaying() || playAac1.isPlaying()) {
     NVIC_ENABLE_IRQ(IRQ_AUDIOCODEC);
     NVIC_TRIGGER_INTERRUPT(IRQ_AUDIOCODEC);
   }
   // for FLAC, use the resumeDecoding interface to safely fill the buffer
-  if(playFlac1.isPlaying()){
+  if (playFlac1.isPlaying()) {
     playFlac1.resumeDecoding();
   }
 }
 
-void setSampleRate(unsigned long long sampleRate){
+void setSampleRate(unsigned long long sampleRate) {
 #if USE_I2S_SLAVE
   uint8_t error;
   // sometimes the sample rate setting doens't go through, so repeate 3 times
-  for(int i=0; i<3; i++){
+  for (int i = 0; i < 3; i++) {
     // clk0 = LRCLK
     error = si5351.set_freq(sampleRate * SI5351_FREQ_MULT, SI5351_CLK0);
-    if(error){
+    if (error) {
       Serial.print("error clk0 ");
       Serial.println(error);
       return;
     }
     // clk1 = BCLK
     error = si5351.set_freq(64 * sampleRate * SI5351_FREQ_MULT, SI5351_CLK1);
-    if(error){
+    if (error) {
       Serial.print("error clk1 ");
       Serial.println(error);
       return;
@@ -119,20 +119,20 @@ void setSampleRate(unsigned long long sampleRate){
   // sample rate change for master needs to be implemented
 }
 
-AudioCodec *getPlayingCodec(){
-  if(playMp31.isPlaying()){
+AudioCodec *getPlayingCodec() {
+  if (playMp31.isPlaying()) {
     return &playMp31;
-  }else if(playAac1.isPlaying()){
+  } else if (playAac1.isPlaying()) {
     return &playAac1;
-  }else if(playFlac1.isPlaying()){
+  } else if (playFlac1.isPlaying()) {
     return &playFlac1;
   }
   return NULL;
 }
 
-void stop(){
+void stop() {
   AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
+  if (playingCodec) {
     playingCodec->stop();
   }
 }
@@ -142,13 +142,13 @@ void playFile(SdBaseFile *file) {
   file->getName(tmpFileName, sizeof(tmpFileName));
   Serial.print("play file: ");
   Serial.println(tmpFileName);
-  
+
   stop();
-  
+
   file->rewind();
   myCodecFile = MyCodecFile(file);
   int error = 0;
-  switch(getFileType(file)){
+  switch (getFileType(file)) {
     case FileType::MP3:
       playMp31.load(&myCodecFile);
       error = playMp31.play();
@@ -170,20 +170,20 @@ void playFile(SdBaseFile *file) {
   Serial.println(error, HEX);
 }
 
-void playNext(){
+void playNext() {
   stop();
   currentFile = dirNav.nextFile();
   playFile(&currentFile);
 }
 
-void playPrev(){
+void playPrev() {
   stop();
   currentFile = dirNav.prevFile();
   playFile(&currentFile);
 }
 
-void flashError(int error){
-  for(int i=0; i<error; i++){
+void flashError(int error) {
+  for (int i = 0; i < error; i++) {
     digitalWrite(LED_PIN, HIGH);
     delay(250);
     digitalWrite(LED_PIN, LOW);
@@ -192,7 +192,7 @@ void flashError(int error){
   delay(1000);
 }
 
-void printStatus(){
+void printStatus() {
   Serial.print("playing: ");
   Serial.print(playMp31.isPlaying());
   Serial.print(playAac1.isPlaying());
@@ -201,9 +201,9 @@ void printStatus(){
   Serial.print(myCodecFile.fposition());
   Serial.print("/");
   Serial.print(myCodecFile.fsize());
-  
+
   AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
+  if (playingCodec) {
     Serial.print(" time: ");
     Serial.print(playingCodec->positionMillis());
     Serial.print("/");
@@ -213,10 +213,10 @@ void printStatus(){
   Serial.println();
 }
 
-void seekAbsolute(uint32_t timesec){
+void seekAbsolute(uint32_t timesec) {
   AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
-    if(timesec > playingCodec->lengthMillis() / 1000){
+  if (playingCodec) {
+    if (timesec > playingCodec->lengthMillis() / 1000) {
       return;
     }
     Serial.print("seeking to ");
@@ -229,17 +229,17 @@ void seekAbsolute(uint32_t timesec){
   }
 }
 
-void testSeek(){
+void testSeek() {
   AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
+  if (playingCodec) {
     uint32_t seekToTime = random(0, (int)playingCodec->lengthMillis() * 0.9 / 1000);
     seekAbsolute(seekToTime);
   }
 }
 
-void seekRelative(int dtsec){
+void seekRelative(int dtsec) {
   AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
+  if (playingCodec) {
     seekAbsolute(playingCodec->positionMillis() / 1000 + dtsec);
   }
 }
@@ -262,6 +262,21 @@ void setup() {
   // sine1.amplitude(0.20);
   // sine1.frequency(1000);
 
+#if USE_I2S_SLAVE
+  // si5351 setup
+  bool si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
+  if (si5351_found) {
+    Serial.println("si5351 found");
+  } else {
+    while (1) {
+      Serial.println("si5351 not found");
+      flashError(1);
+    }
+  }
+#endif
+
+  setSampleRate(44100);
+
 ///// END AUDIO
 
 ///// VFD
@@ -277,20 +292,33 @@ void setup() {
   SPI.begin();
 
   // set SPI mode once and never touch it again
-  SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
+  // The VFD supports up to 5MHz. Use half of it for safety
+  SPI.beginTransaction(SPISettings(2500000, MSBFIRST, SPI_MODE3));
   SPI.endTransaction();
 
   DUMPVAL(SPI0_CTAR0);
   DUMPVAL(SPI0_PUSHR);
   SPI0_CTAR0 &= ~(SPI_CTAR_ASC(0xf));
   // set up SPI delay params to meet timing requirements of the VFD
-  SPI0_CTAR0 |= SPI_CTAR_CSSCK(1) | SPI_CTAR_PASC(1) | SPI_CTAR_ASC(1) | SPI_CTAR_DT(1);
+  // the minimum delays required to meet requirements
+  // SPI0_CTAR0 |= SPI_CTAR_CSSCK(1) | SPI_CTAR_PASC(1) | SPI_CTAR_ASC(1) | SPI_CTAR_PDT(1) | SPI_CTAR_DT(0);
+  // double the delays for safety
+  SPI0_CTAR0 |= SPI_CTAR_CSSCK(2) | SPI_CTAR_PASC(1) | SPI_CTAR_ASC(2) | SPI_CTAR_PDT(1) | SPI_CTAR_DT(1);
   DUMPVAL(SPI0_CTAR0);
   DUMPVAL(SPI0_PUSHR);
 
 #if USE_HW_CS
-  CORE_PIN10_CONFIG = PORT_PCR_MUX(2); // pin 10 = PTC4 = SPI0_PCS0
-  CORE_PIN6_CONFIG = PORT_PCR_MUX(2); // pin 6 = PTD4 = SPI0_PCS1
+  // The drive strength (DSE) and slew rate (SRE) settings are a hacky way to make C/D slower than SS
+  // Otherwise I can't use HW SPI CS and SPI DMA.
+  // The display has trouble understanding the signal when the SS and C/D switch at exactly the same time
+  // PIN 10 = SS
+  DUMPVAL(CORE_PIN10_CONFIG);
+  CORE_PIN10_CONFIG = PORT_PCR_MUX(2) | PORT_PCR_DSE; // pin 10 = PTC4 = SPI0_PCS0
+  DUMPVAL(CORE_PIN10_CONFIG);
+  // PIN 6 = CMD/DATA
+  DUMPVAL(CORE_PIN6_CONFIG);
+  CORE_PIN6_CONFIG = PORT_PCR_MUX(2) | PORT_PCR_SRE; // pin 6 = PTD4 = SPI0_PCS1
+  DUMPVAL(CORE_PIN6_CONFIG);
 #endif
 
   vfdInit();
@@ -302,36 +330,19 @@ void setup() {
 
   vfdSetAutoInc(1, 0);
 
-  for(int i=0; i<6; i++) {
+  for (int i = 0; i < 6; i++) {
     vfdSetCursor(0, i + 2);
-    for(int j = 0; j < 96; j++) {
-      vfdSend(ms_6x8_font[0x20 + 16*i + j/6][j%6], false);
+    for (int j = 0; j < 96; j++) {
+      vfdSend(ms_6x8_font[0x20 + 16 * i + j / 6][j % 6], false);
     }
   }
 
 ///// END VFD
 
-#if USE_I2S_SLAVE
-  // si5351 setup
-  bool si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-  if(si5351_found){
-    Serial.println("si5351 found");
-  }else{
-    while(1){
-      Serial.println("si5351 not found");
-      flashError(1);
-    }
-  }
-#endif
-
-  setSampleRate(44100);
-
-///// END AUDIO
-
 ///// SD CARD
 
   if (!sdEx.begin()) {
-    while(1){
+    while (1) {
       Serial.println("SdFatSdioEX begin() failed");
       flashError(2);
     }
@@ -342,7 +353,7 @@ void setup() {
 ///// END SD CARD
 
   Serial.println("ALL INIT DONE!");
-  
+
   // make sdEx the current volume.
   sdEx.chvol();
 
@@ -350,10 +361,10 @@ void setup() {
 
   dirNav.openRoot(SdBaseFile::cwd()->volume());
 
-  if(dirNav.curDirFiles()){
+  if (dirNav.curDirFiles()) {
     playNext();
-  }else{
-    while(true){
+  } else {
+    while (true) {
       Serial.println("NO FILES");
       delay(1000);
     }
@@ -366,28 +377,28 @@ int sampleRateIndex = 0;
 char strbuf[4] = {0};
 void loop() {
   // put your main code here, to run repeatedly:
-  if(Serial.available()){
+  if (Serial.available()) {
     char c = Serial.read();
-    switch(c){
+    switch (c) {
       case '\n':
         break;
       case 'F':
-        for(int i=0 ;i<128; i++){
+        for (int i = 0 ; i < 128; i++) {
           Serial.println(fft256_1.output[i]);
         }
         break;
       case 'G':
-        for(int i=0; i<3; ) {
-          if(!Serial.available()) {
+        for (int i = 0; i < 3; ) {
+          if (!Serial.available()) {
             continue;
           }
           char d = Serial.read();
-          if(d == '\n'){
+          if (d == '\n') {
             strbuf[i] = 0;
             break;
-          }else if(isdigit(d)){
+          } else if (isdigit(d)) {
             strbuf[i] = d;
-          }else{
+          } else {
             // invalid
             Serial.print("invalid digit ");
             Serial.println(d);
@@ -400,7 +411,7 @@ void loop() {
           Serial.print("select item ");
           Serial.println(itemNum);
           SdBaseFile tmpFile = dirNav.selectItem(itemNum);
-          if(tmpFile.isOpen()){
+          if (tmpFile.isOpen()) {
             stop();
             currentFile = tmpFile;
             playFile(&currentFile);
@@ -442,16 +453,17 @@ void loop() {
     }
     return;
   }
-  
-  if(dirNav.curDirFiles() && !getPlayingCodec()){
+
+  if (dirNav.curDirFiles() && !getPlayingCodec()) {
     playNext();
   }
 
-  for(int i=0 ;i<128; i++){
+  // spectrum on top half of the screen
+  for (int i = 0 ; i < 128; i++) {
     uint16_t fftBin = fft256_1.output[i];
     uint32_t fftBinLog = fftBin ? (32 - __builtin_clz((uint32_t)fftBin)) : 0;
     uint32_t lsb = 0;
-    if(fftBinLog > 1){
+    if (fftBinLog > 1) {
       // use the bit after the leading bit to add an approximate bit to the log
       lsb = (fftBin >> (fftBinLog - 2)) & 1;
     }
@@ -461,6 +473,17 @@ void loop() {
     framebuffer[1][i] = fftBinLogMask >> 8;
     framebuffer[2][i] = fftBinLogMask >> 16;
     framebuffer[3][i] = fftBinLogMask >> 24;
+  }
+  // snow on bottom half of the screen for stress testing
+  for (int i = 0; i < 128; i++) {
+    for (int j = 4; j < 8; j++) {
+      framebuffer[j][i] = 0;
+      for (int k = 0; k < 8; k++) {
+        if (random(8) == 0) {
+          framebuffer[j][i] |= 1 << k;
+        }
+      }
+    }
   }
   vfdWriteFb(0);
 }
