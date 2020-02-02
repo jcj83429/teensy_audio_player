@@ -1,3 +1,6 @@
+#ifndef MYCODECFILE_H
+#define MYCODECFILE_H
+
 #include <codecs.h>
 #include <SdFat.h>
 
@@ -26,3 +29,5 @@ public:
 protected:
   SdBaseFile *sdFile;
 };
+
+#endif
