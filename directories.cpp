@@ -24,11 +24,11 @@ char * getCachedFileName(SdBaseFile *dir, uint16_t fileIdx){
   unsigned long long startTime = micros();
   // first search for the file in the cache
   uint32_t dirFirstCluster = dir->firstCluster();
-//  Serial.print("(");
-//  Serial.print(dirFirstCluster);
-//  Serial.print(", ");
-//  Serial.print(fileIdx);
-//  Serial.println(")");
+  Serial.print("(");
+  Serial.print(dirFirstCluster);
+  Serial.print(", ");
+  Serial.print(fileIdx);
+  Serial.println(")");
 
   int cacheEntry = fileNameCacheFirstEntry;
   while(cacheEntry != fileNameCacheLastEntry){
@@ -155,7 +155,7 @@ char * DirectoryNavigator::curDirFileName(int index) {
   if(index >= numFiles[dirStackLevel]){
     return NULL;
   }
-  return getCachedFileName(curDir(), index);
+  return getCachedFileName(curDir(), sortedFileIdx[dirStackLevel][index]);
 }
 
 void DirectoryNavigator::printCurDir() {
@@ -254,9 +254,9 @@ SdBaseFile DirectoryNavigator::prevFile() {
   return ret;
 }
 
-void DirectoryNavigator::upDir() {
+bool DirectoryNavigator::upDir() {
   if(dirStackLevel <= 0){
-    return;
+    return false;
   }
   lastSelectedItem = parentDirIdx[dirStackLevel];
   // it's probably not necessary to suspend decoding but whatever
@@ -264,6 +264,7 @@ void DirectoryNavigator::upDir() {
   dirStack[dirStackLevel].close();
   resumeDecoding();
   dirStackLevel--;
+  return true;
 }
 
 void DirectoryNavigator::loadCurDir() {

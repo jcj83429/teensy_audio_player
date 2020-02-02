@@ -1,3 +1,5 @@
+#include "directories.h"
+
 #define PIN_KEY_PREV 24
 #define PIN_KEY_RWD  25
 #define PIN_KEY_PLAY 26
@@ -57,5 +59,12 @@ public:
 
 class UiModeFiles : public UiModeBase {
 public:
+  UiModeFiles();
+  ~UiModeFiles();
   UiMode update();
+
+  void draw();
+
+  DirectoryNavigator filesModeDirNav;
+  int highlightedIdx;
 };

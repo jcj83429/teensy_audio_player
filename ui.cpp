@@ -78,9 +78,19 @@ void updateKeyStates(){
   }
 }
 
-void printChar(char c, int x, int y){
+void printChar(char c, int x, int y, bool highlight){
+  uint8_t xorVal = highlight ? 0xff : 0;
   for(int i=0; i<6; i++){
-    framebuffer[y][x + i] = ms_6x8_font[(int)c][i];
+    framebuffer[y][x + i] = xorVal ^ ms_6x8_font[(int)c][i];
+  }
+}
+
+void printStr(char *s, int maxLen, int x, int y, bool highlight){
+  while(*s && maxLen){
+    printChar(*s, x, y, highlight);
+    x += 6;
+    s++;
+    maxLen--;
   }
 }
 
@@ -88,7 +98,7 @@ void printNum(int n, int digits, int x, int y){
   x += (digits - 1) * 6;
   for(int i = 0; i < digits; i++){
     char c = '0' + n % 10;
-    printChar(c, x, y);
+    printChar(c, x, y, false);
     x -= 6;
     n /= 10;
   }
@@ -103,7 +113,7 @@ void printTime(int timesec, int x, int y){
   int secs = timesec % 60;
 
   printNum(mins, 2, x, y);
-  printChar(':', x + 12, y);
+  printChar(':', x + 12, y, false);
   printNum(secs, 2, x + 18, y);
 }
 
@@ -185,7 +195,7 @@ keysdone:
       if(c == 0){
         goto filenameend;
       }
-      printChar(c, i * 6, j + 4);
+      printChar(c, i * 6, j + 4, false);
     }
   }
 filenameend:
@@ -193,16 +203,69 @@ filenameend:
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
     printTime(playingCodec->lengthMillis() / 1000, 128 - 5 * 6, 7);
-    printChar('/', 128 - 6 * 6, 7);
+    printChar('/', 128 - 6 * 6, 7, false);
     printTime(playingCodec->positionMillis() / 1000, 128 - 11 * 6, 7);
   }
 
   return UI_MODE_INVALID;
 }
 
+UiModeFiles::UiModeFiles(){
+  // all files are opened read only, so just copy the whole dirNav
+  filesModeDirNav = dirNav;
+  highlightedIdx = filesModeDirNav.lastSelectedItem;
+  draw();
+}
+
+UiModeFiles::~UiModeFiles(){
+}
+
 UiMode UiModeFiles::update() {
+  bool updated = false;
+  // FN1 key: go back to main mode
   if(keys[KEY_FN1].event == KEY_EV_DOWN){
     return UI_MODE_MAIN;
   }
+  // NEXT key: go into dir or play file
+  if(keys[KEY_NEXT].event == KEY_EV_DOWN){
+    SdBaseFile selectedFile = filesModeDirNav.selectItem(highlightedIdx);
+    if(selectedFile.isOpen()){
+      stop();
+      currentFile = selectedFile;
+      playFile(&currentFile);
+      // write directory stack etc. back
+      dirNav = filesModeDirNav;
+      return UI_MODE_MAIN;
+    }else{
+      highlightedIdx = 0;
+      updated = true;
+    }
+  }else if(keys[KEY_PREV].event == KEY_EV_DOWN){
+    if(filesModeDirNav.upDir()){
+      highlightedIdx = filesModeDirNav.lastSelectedItem;
+      updated = true;
+    }
+  }else if(keys[KEY_FF].event == KEY_EV_DOWN){
+    highlightedIdx = (highlightedIdx + 1) % filesModeDirNav.curDirFiles();
+    updated = true;
+  }else if(keys[KEY_RWD].event == KEY_EV_DOWN){
+    highlightedIdx = (highlightedIdx + filesModeDirNav.curDirFiles() - 1) % filesModeDirNav.curDirFiles();
+    updated = true;
+  }
+  if(updated){
+    draw();
+  }
   return UI_MODE_INVALID;
+}
+
+void UiModeFiles::draw() {
+  memset(framebuffer, 0, sizeof(framebuffer));
+  int fileIdx = highlightedIdx & ~7;
+  for(int i=0; i<8; i++){
+    if(i >= filesModeDirNav.curDirFiles()){
+      break;
+    }
+    printStr(filesModeDirNav.curDirFileName(fileIdx), 21, 0, i, fileIdx == highlightedIdx);
+    fileIdx++;
+  }
 }

@@ -41,10 +41,10 @@ public:
   SdBaseFile selectItem(int index); // For file, open file in ret. For dir, return SdBaseFile()
   SdBaseFile nextFile();
   SdBaseFile prevFile();
-  void upDir();
+  bool upDir();
 
 //protected:
-  int dirStackLevel = -1; // -1 is uninitialized. 0 is root
+  int dirStackLevel; // -1 is uninitialized. 0 is root
   SdBaseFile dirStack[MAX_DIR_STACK];
   uint16_t parentDirIdx[MAX_DIR_STACK]; // what index is each dir in its parent dir?
   int numFiles[MAX_DIR_STACK];
