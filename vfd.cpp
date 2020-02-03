@@ -3,13 +3,21 @@
 
 uint8_t framebuffer[8][128];
 
-void vfdSend(uint8_t value, bool isCommand) {
-
 #if USE_HW_CS
+#define FB_FULL_WRITE_CMDS (8 * (128 + 4))
+uint32_t vfdcmdbuf[FB_FULL_WRITE_CMDS];
+
+uint32_t spiCmd(uint8_t value, bool isCommand){
   // teensy: use hardware CS to control SS and CMD/DATA
   // For command, pull the SS down. For data, pull the SS and CMD/DATA down.
   uint8_t cs_pins = isCommand ? 1 : 3;
-  SPI0_PUSHR = value | SPI_PUSHR_PCS(cs_pins);
+  return value | SPI_PUSHR_PCS(cs_pins);
+}
+#endif
+
+void vfdSend(uint8_t value, bool isCommand) {
+#if USE_HW_CS
+  SPI0_PUSHR = spiCmd(value, isCommand);
   while (!(SPI0_SR & SPI_SR_TCF));
   SPI0_SR = SPI_SR_TCF;
 #else
@@ -55,10 +63,30 @@ void vfdSetAutoInc(bool dx, bool dy) {
 
 void vfdWriteFb(bool isGram1) {
   uint8_t baseY = isGram1 ? 8 : 0;
+#if USE_HW_CS
+  int cmdIdx = 0;
+  for(int i=0; i<8; i++){
+    int y = baseY + i;
+    vfdcmdbuf[cmdIdx++] = spiCmd(0x64, true);
+    vfdcmdbuf[cmdIdx++] = spiCmd(0, true);
+    vfdcmdbuf[cmdIdx++] = spiCmd(0x60, true);
+    vfdcmdbuf[cmdIdx++] = spiCmd(y, true);
+    for(int j=0; j<128; j++){
+      vfdcmdbuf[cmdIdx++] = spiCmd(framebuffer[i][j], false);
+    }
+  }
+  cmdIdx = 0;
+  for(int i=0; i<FB_FULL_WRITE_CMDS; i++){
+    SPI0_PUSHR = vfdcmdbuf[i];
+    while (!(SPI0_SR & SPI_SR_TCF));
+    SPI0_SR = SPI_SR_TCF;
+  }
+#else
   for(int i=0; i<8; i++){
     vfdSetCursor(0, baseY + i);
     for(int j=0; j<128; j++){
       vfdSend(framebuffer[i][j], false);
     }
   }
+#endif
 }
