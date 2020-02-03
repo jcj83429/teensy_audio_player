@@ -68,10 +68,10 @@ void updateKeyStates(){
     if(keys[keyId].lastChangeTime - now > DEBOUNCE_TIME && keys[keyId].lastEventTime < keys[keyId].lastChangeTime){
       keys[keyId].event = newState ? KEY_EV_UP : KEY_EV_DOWN;
       keys[keyId].lastEventTime = now;
-      Serial.print("KEY ");
-      Serial.print(keyId);
-      Serial.print(" EVENT ");
-      Serial.println(keys[keyId].event);
+//      Serial.print("KEY ");
+//      Serial.print(keyId);
+//      Serial.print(" EVENT ");
+//      Serial.println(keys[keyId].event);
     }else{
       keys[keyId].event = KEY_EV_NONE;
     }
@@ -81,7 +81,10 @@ void updateKeyStates(){
 void printChar(char c, int x, int y, bool highlight){
   uint8_t xorVal = highlight ? 0xff : 0;
   for(int i=0; i<6; i++){
-    framebuffer[y][x + i] = xorVal ^ ms_6x8_font[(int)c][i];
+    if(x >= 0 && x < 128){
+      framebuffer[y][x] = xorVal ^ ms_6x8_font[(int)c][i];
+    }
+    x++;
   }
 }
 
@@ -214,6 +217,8 @@ UiModeFiles::UiModeFiles(){
   // all files are opened read only, so just copy the whole dirNav
   filesModeDirNav = dirNav;
   highlightedIdx = filesModeDirNav.lastSelectedItem;
+  highlightedFnOffset = 0;
+  lastUpdateTime = millis();
   draw();
 }
 
@@ -222,6 +227,7 @@ UiModeFiles::~UiModeFiles(){
 
 UiMode UiModeFiles::update() {
   bool updated = false;
+  unsigned long now = millis();
   // FN1 key: go back to main mode
   if(keys[KEY_FN1].event == KEY_EV_DOWN){
     return UI_MODE_MAIN;
@@ -252,8 +258,27 @@ UiMode UiModeFiles::update() {
     highlightedIdx = (highlightedIdx + filesModeDirNav.curDirFiles() - 1) % filesModeDirNav.curDirFiles();
     updated = true;
   }
+
+  if(updated){
+    highlightedFnOffset = 0;
+  }else{
+    if((highlightedFnOffset > 0 && now - lastUpdateTime > 20) || now - lastUpdateTime > 500){
+      int fnlen = strlen(filesModeDirNav.curDirFileName(highlightedIdx));
+      if(fnlen > 21){
+        highlightedFnOffset += 1;
+        if(highlightedFnOffset >= strlen(filesModeDirNav.curDirFileName(highlightedIdx)) * 6){
+          highlightedFnOffset = 0;
+        }
+        updated = true;
+      }else{
+        lastUpdateTime += 60000; // file name doesn't need scrolling
+      }
+    }
+  }
+
   if(updated){
     draw();
+    lastUpdateTime = now;
   }
   return UI_MODE_INVALID;
 }
@@ -265,7 +290,17 @@ void UiModeFiles::draw() {
     if(i >= filesModeDirNav.curDirFiles()){
       break;
     }
-    printStr(filesModeDirNav.curDirFileName(fileIdx), 21, 0, i, fileIdx == highlightedIdx);
+    char *fn = filesModeDirNav.curDirFileName(fileIdx);
+    bool highlight = false;
+    int x = 0;
+    if(fileIdx == highlightedIdx){
+      highlight = true;
+      fn += highlightedFnOffset / 6;
+      x = -(highlightedFnOffset % 6);
+    }else{
+      x = 0;
+    }
+    printStr(fn, 22, x, i, highlight);
     fileIdx++;
   }
 }

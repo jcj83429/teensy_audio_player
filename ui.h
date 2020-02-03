@@ -67,4 +67,6 @@ public:
 
   DirectoryNavigator filesModeDirNav;
   int highlightedIdx;
+  unsigned int highlightedFnOffset;
+  unsigned long lastUpdateTime;
 };

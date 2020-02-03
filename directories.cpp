@@ -24,11 +24,11 @@ char * getCachedFileName(SdBaseFile *dir, uint16_t fileIdx){
   unsigned long long startTime = micros();
   // first search for the file in the cache
   uint32_t dirFirstCluster = dir->firstCluster();
-  Serial.print("(");
-  Serial.print(dirFirstCluster);
-  Serial.print(", ");
-  Serial.print(fileIdx);
-  Serial.println(")");
+//  Serial.print("(");
+//  Serial.print(dirFirstCluster);
+//  Serial.print(", ");
+//  Serial.print(fileIdx);
+//  Serial.println(")");
 
   int cacheEntry = fileNameCacheFirstEntry;
   while(cacheEntry != fileNameCacheLastEntry){
@@ -77,8 +77,14 @@ char * getCachedFileName(SdBaseFile *dir, uint16_t fileIdx){
   SdBaseFile tmpFile;
   suspendDecoding();
   tmpFile.open(dir, fileIdx, O_RDONLY);
-  tmpFile.getName(&fileNameCache[newEntryPos], FILE_NAME_MAX_LEN);
+  tmpFile.getName(&fileNameCache[newEntryPos], FILE_NAME_MAX_LEN - 1); // leave 1 byte for "/" in case of dir
   resumeDecoding();
+  if(tmpFile.isDir()){
+    int fnLen = strlen(&fileNameCache[newEntryPos]);
+    fileNameCache[newEntryPos + fnLen] = '/';
+    fileNameCache[newEntryPos + fnLen + 1] = 0;
+  }
+  
   struct FileNameCacheEntryInfo *newEntryInfo = &fileNameCacheEntryInfo[fileNameCacheLastEntry];
   newEntryInfo->dirFirstCluster = dirFirstCluster;
   newEntryInfo->fileIdx = fileIdx;
