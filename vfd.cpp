@@ -4,8 +4,12 @@
 uint8_t framebuffer[8][128];
 
 #if USE_HW_CS
+
+#if USE_SPI_DMA
 #define FB_FULL_WRITE_CMDS (8 * (128 + 4))
 uint32_t vfdcmdbuf[FB_FULL_WRITE_CMDS];
+DMAChannel *vfdSpiDma;;
+#endif
 
 uint32_t spiCmd(uint8_t value, bool isCommand){
   // teensy: use hardware CS to control SS and CMD/DATA
@@ -36,6 +40,8 @@ void vfdSetGram(bool isGram1) {
 }
 
 void vfdInit() {
+  vfdSpiDma = new DMAChannel();
+
   // clear
   vfdSend(0x5f, true);
   delay(1); // datasheet says wait 1ms
@@ -63,7 +69,7 @@ void vfdSetAutoInc(bool dx, bool dy) {
 
 void vfdWriteFb(bool isGram1) {
   uint8_t baseY = isGram1 ? 8 : 0;
-#if USE_HW_CS
+#if (USE_HW_CS && USE_SPI_DMA)
   int cmdIdx = 0;
   for(int i=0; i<8; i++){
     int y = baseY + i;
@@ -75,12 +81,31 @@ void vfdWriteFb(bool isGram1) {
       vfdcmdbuf[cmdIdx++] = spiCmd(framebuffer[i][j], false);
     }
   }
+  /*
   cmdIdx = 0;
   for(int i=0; i<FB_FULL_WRITE_CMDS; i++){
     SPI0_PUSHR = vfdcmdbuf[i];
     while (!(SPI0_SR & SPI_SR_TCF));
     SPI0_SR = SPI_SR_TCF;
   }
+  */
+  SPI0_RSER = SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
+  vfdSpiDma->disable();
+  vfdSpiDma->destination(SPI0_PUSHR);
+  vfdSpiDma->disableOnCompletion();
+  vfdSpiDma->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
+  vfdSpiDma->sourceBuffer(vfdcmdbuf, FB_FULL_WRITE_CMDS * 4);
+  unsigned long startTime = millis();
+  vfdSpiDma->enable();
+  while(!vfdSpiDma->complete()){
+    if(millis() - startTime > 1000){
+      Serial.println("SPI DMA stuck");
+      DUMPVAL(SPI0_SR);
+      startTime += 1000;
+    }
+  }
+  SPI0_SR = 0xFF0F0000;
+  SPI0_RSER = 0;
 #else
   for(int i=0; i<8; i++){
     vfdSetCursor(0, baseY + i);

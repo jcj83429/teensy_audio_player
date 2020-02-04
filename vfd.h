@@ -7,6 +7,7 @@
 #define PIN_VFD_FRP 28
 
 #define USE_HW_CS 1
+#define USE_SPI_DMA 1
 
 #define DUMPVAL(x) do{ Serial.print(#x); Serial.print(": "); Serial.println(x, HEX); }while(0);
 

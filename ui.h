@@ -40,7 +40,7 @@ struct KeyInfo {
 extern struct KeyInfo keys[];
 
 void updateKeyStates();
-void printChar(char c, int x, int y);
+void printChar(char c, int x, int y, bool highlight);
 void printNum(int n, int digits, int x, int y);
 void printTime(int timesec, int x, int y);
 void uiUpdate();
