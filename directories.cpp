@@ -1,5 +1,7 @@
 #include "directories.h"
 #include <Audio.h>
+#include "eeprom_offsets.h"
+#include <EEPROM.h>
 
 char fileNameCache[FILE_NAME_CACHE_SIZE];
 
@@ -273,6 +275,37 @@ bool DirectoryNavigator::upDir() {
   return true;
 }
 
+// TODO: also save crc of the filenames in case files were added or deleted
+void DirectoryNavigator::saveCurrentFile(){
+  if(lastSelectedItem == -1){
+    // this dirnav is never used
+    return;
+  }
+  // level 0 is root, so don't save it
+  int offset = 0;
+  for(int i = 0; i < dirStackLevel; i++){
+    EEPROM.write(EEPROM_OFFSET_DIRSTACK + offset, parentDirIdx[i + 1]);
+    offset++;
+  }
+  EEPROM.write(EEPROM_OFFSET_DIRSTACK + offset, lastSelectedItem);
+}
+
+SdBaseFile DirectoryNavigator::restoreCurrentFile(){
+  SdBaseFile ret;
+  while(upDir()); // go to root dir
+  for(int i = 0; i < MAX_DIR_STACK; i++){
+    int itemIdx = EEPROM.read(EEPROM_OFFSET_DIRSTACK + i);
+    if(itemIdx >= curDirFiles()){
+      return SdBaseFile(); // error
+    }
+    ret = selectItem(itemIdx);
+    if(ret.isOpen()){
+      return ret;
+    }
+  }
+  return SdBaseFile(); // error
+}
+
 void DirectoryNavigator::loadCurDir() {
   unsigned long long startTime = micros();
   int nf = 0;
@@ -297,4 +330,4 @@ void DirectoryNavigator::loadCurDir() {
   quicksortFiles(curDir(), sortedFileIdx[dirStackLevel], nf);
   Serial.print("dir load took ");
   Serial.println((int)(micros() - startTime));
-}
+}`

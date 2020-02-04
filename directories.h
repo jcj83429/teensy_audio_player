@@ -43,6 +43,9 @@ public:
   SdBaseFile prevFile();
   bool upDir();
 
+  void saveCurrentFile(); // save which file is currently selected
+  SdBaseFile restoreCurrentFile(); // restore currently selected file and return it
+
 //protected:
   int dirStackLevel; // -1 is uninitialized. 0 is root
   SdBaseFile dirStack[MAX_DIR_STACK];

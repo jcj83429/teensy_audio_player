@@ -1,4 +1,6 @@
 #include "player.h"
+#include <EEPROM.h>
+#include "eeprom_offsets.h"
 
 //////////////////// Teensy Audio library
 // GUItool: begin automatically generated code
@@ -41,6 +43,48 @@ MyCodecFile myCodecFile(NULL);
 bool isPaused = false;
 
 DirectoryNavigator dirNav;
+
+void startPlayback(){
+  dirNav.openRoot(SdBaseFile::cwd()->volume());
+
+  currentFile = dirNav.restoreCurrentFile();
+  if(currentFile.isOpen()){
+    Serial.println("continue playing last played file");
+    playFile(&currentFile);
+    uint16_t playPosSec = 0;
+    for(int i = sizeof(playPosSec) - 1; i >= 0; i--){
+      playPosSec <<= 8;
+      playPosSec |= EEPROM.read(EEPROM_OFFSET_PLAYTIME + i);
+    }
+    Serial.print("resume to ");
+    Serial.println(playPosSec);
+    seekAbsolute(playPosSec);
+    return;
+  }
+
+  if (dirNav.curDirFiles()) {
+    playNext();
+  } else {
+    while (true) {
+      Serial.println("NO FILES");
+      delay(1000);
+    }
+  }
+}
+
+void savePlaybackPosition(){
+  uint16_t playPosSec = 0;
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(playingCodec){
+    playPosSec = playingCodec->positionMillis() / 1000;
+  }
+  for(unsigned int i = 0; i < sizeof(playPosSec); i++){
+    EEPROM.write(EEPROM_OFFSET_PLAYTIME + i, playPosSec & 0xff);
+    playPosSec >>= 8;
+  }
+
+  dirNav.saveCurrentFile();
+}
 
 // we can't disable the audio interrupt because otherwise the audio output will glitch.
 // so we suspend the decoders' decoding while keeping their outputs running

@@ -18,10 +18,27 @@
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 #define LED_PIN 13
 
+#define PIN_SUPERCAP 37
+#define SCB_AIRCR (*(volatile uint32_t *)0xE000ED0C) // Application Interrupt and Reset Control location
+
 SdFatSdioEX sdEx;
 
 int sampleRates[] = {44100, 88200, 22050};
 int sampleRateIndex = 0;
+
+void low_voltage_isr(void){
+  digitalWrite(LED_PIN, true);
+  savePlaybackPosition();
+  // Fully power off by cutting off supercap.
+  // The teensy can hold itself in reset until voltage recovers, 
+  // but the SD card will get glitched by low voltage and never recover.
+  // So make sure the power is completely off
+  digitalWrite(37, LOW);
+  // If we are still alive after 1s, reset
+  delay(1000);
+  Serial.end();  //clears the serial monitor  if used
+  SCB_AIRCR = 0x05FA0004;  //write value for restart
+}
 
 void printStatus() {
   Serial.print("playing: ");
@@ -130,6 +147,9 @@ bool doSerialControl(){
       case 'U':
         dirNav.upDir();
         break;
+      case 'V':
+        savePlaybackPosition();
+        break;
       case '>':
         seekRelative(+5);
         break;
@@ -147,8 +167,16 @@ bool doSerialControl(){
 }
 
 void setup() {
-  Serial.begin(115200);
+  pinMode(PIN_SUPERCAP, OUTPUT);
+  digitalWrite(PIN_SUPERCAP, HIGH);
   delay(100);
+  // clear low voltage detection
+  PMC_LVDSC2 |= PMC_LVDSC2_LVWACK;
+  // choose high detect threshold, enable LV interrupt
+  PMC_LVDSC2 = PMC_LVDSC2_LVWV(3) | PMC_LVDSC2_LVWIE;
+  NVIC_ENABLE_IRQ(IRQ_LOW_VOLTAGE);
+
+  Serial.begin(115200);
   //while(!Serial);
 
   pinMode(LED_PIN, OUTPUT);
@@ -166,6 +194,8 @@ void setup() {
   // mix L+R for FFT
   mixer3.gain(0, 0.5);
   mixer3.gain(3, 0.5);
+
+  fft256_1.averageTogether(2);
 
   // FOR DAC SANITY
   // sine1.amplitude(0.20);
@@ -247,16 +277,14 @@ void setup() {
 
 ///// END VFD
 
+
 ///// SD CARD
 
-  if (!sdEx.begin()) {
-    while (1) {
-      Serial.println("SdFatSdioEX begin() failed");
-      flashError(2);
-    }
-  } else {
-    Serial.println("SD init success");
+  while (!sdEx.begin()) {
+    Serial.println("SdFatSdioEX begin() failed");
+    flashError(2);
   }
+  Serial.println("SD init success");
 
 ///// END SD CARD
 
@@ -267,16 +295,7 @@ void setup() {
 
   // sdEx.ls(LS_R | LS_DATE | LS_SIZE);
 
-  dirNav.openRoot(SdBaseFile::cwd()->volume());
-
-  if (dirNav.curDirFiles()) {
-    playNext();
-  } else {
-    while (true) {
-      Serial.println("NO FILES");
-      delay(1000);
-    }
-  }
+  startPlayback();
 
   updateKeyStates();
 }
