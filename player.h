@@ -1,3 +1,4 @@
+#define USE_F32 1
 #define USE_I2S_SLAVE 0
 
 #include <play_sd_mp3.h>
@@ -15,9 +16,13 @@ extern AudioMixer4              mixer2;         //xy=371.25,221.25
 extern AudioMixer4              mixer3;         //xy=723.25,165.25
 extern AudioAnalyzeFFT256       fft256_1;       //xy=860.25,165.25
 
+#if !USE_F32
+
 #if USE_I2S_SLAVE
 //////////////////// I2S clock generator
 extern Si5351 si5351;
+#endif
+
 #endif
 
 extern SdBaseFile currentFile;
@@ -41,3 +46,8 @@ void playPrev();
 void togglePause();
 void seekAbsolute(uint32_t timesec);
 void seekRelative(int dtsec);
+
+#if USE_F32
+extern float currentGain;
+void setGain(float32_t dB);
+#endif

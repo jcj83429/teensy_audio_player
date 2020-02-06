@@ -330,4 +330,4 @@ void DirectoryNavigator::loadCurDir() {
   quicksortFiles(curDir(), sortedFileIdx[dirStackLevel], nf);
   Serial.print("dir load took ");
   Serial.println((int)(micros() - startTime));
-}`
+}

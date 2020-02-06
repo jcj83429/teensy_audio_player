@@ -8,6 +8,7 @@
 #include "font.h"
 #include "ui.h"
 #include "player.h"
+#include <AudioStream_F32.h>
 
 // I2S wiring
 // LRCLK = 23
@@ -156,6 +157,14 @@ bool doSerialControl(){
       case '<':
         seekRelative(-5);
         break;
+#if USE_F32
+      case '+':
+        setGain(currentGain + 1);
+        break;
+      case '-':
+        setGain(currentGain - 1);
+        break;
+#endif
       default:
         Serial.print("unknown cmd ");
         Serial.println(c);
@@ -190,6 +199,7 @@ void setup() {
 
 ///// AUDIO
   AudioMemory(20);
+  AudioMemory_F32(8);
 
   // mix L+R for FFT
   mixer3.gain(0, 0.5);
@@ -201,6 +211,7 @@ void setup() {
   // sine1.amplitude(0.20);
   // sine1.frequency(1000);
 
+#if !USE_F32
 #if USE_I2S_SLAVE
   // si5351 setup
   bool si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
@@ -212,6 +223,7 @@ void setup() {
       flashError(1);
     }
   }
+#endif
 #endif
 
   setSampleRate(44100);
