@@ -6,15 +6,20 @@
 #include <play_sd_flac.h>
 #include "mycodecfile.h"
 #include "directories.h"
+#include "analyze_fft256_f32.h"
+#include <AudioMixer_F32.h>
 
 extern AudioPlaySdMp3           playMp31;     //xy=100.25,89.25
 extern AudioPlaySdAac           playAac1;     //xy=110.25,130.25
 extern AudioPlaySdFlac          playFlac1;     //xy=119.25,173.25
 extern AudioSynthWaveformSine   sine1;          //xy=150.25,217.25
-extern AudioMixer4              mixer1;         //xy=371.25,109.25
-extern AudioMixer4              mixer2;         //xy=371.25,221.25
-extern AudioMixer4              mixer3;         //xy=723.25,165.25
-extern AudioAnalyzeFFT256       fft256_1;       //xy=860.25,165.25
+#if !USE_F32
+extern AudioMixer4              mixer3;
+extern AudioAnalyzeFFT256       fft256;
+#else
+extern AudioMixer4_F32          mixer3;
+extern AudioAnalyzeFFT256_F32   fft256;
+#endif
 
 #if !USE_F32
 

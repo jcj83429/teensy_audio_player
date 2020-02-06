@@ -14,9 +14,6 @@ AudioPlaySdFlac          playFlac1;     //xy=119.25,173.25
 AudioSynthWaveformSine   sine1;          //xy=150.25,217.25
 AudioMixer4              mixer1;         //xy=371.25,109.25
 AudioMixer4              mixer2;         //xy=371.25,221.25
-
-AudioMixer4              mixer3;         //xy=723.25,165.25
-AudioAnalyzeFFT256       fft256_1;       //xy=860.25,165.25
 AudioConnection          patchCord1(playMp31, 0, mixer1, 0);
 AudioConnection          patchCord2(playMp31, 1, mixer2, 0);
 AudioConnection          patchCord3(playAac1, 0, mixer1, 1);
@@ -25,9 +22,6 @@ AudioConnection          patchCord5(playFlac1, 0, mixer1, 2);
 AudioConnection          patchCord6(playFlac1, 1, mixer2, 2);
 AudioConnection          patchCord7(sine1, 0, mixer1, 3);
 AudioConnection          patchCord8(sine1, 0, mixer2, 3);
-AudioConnection          patchCord10(mixer1, 0, mixer3, 0);
-AudioConnection          patchCord12(mixer2, 0, mixer3, 3);
-AudioConnection          patchCord13(mixer3, fft256_1);
 // GUItool: end automatically generated code 
 
 #if !USE_F32
@@ -40,8 +34,14 @@ Si5351 si5351;
 #else
 AudioOutputI2S           i2s1;
 #endif
+// 16 bit fft
+AudioAnalyzeFFT256       fft256;
+AudioMixer4              mixer3;
 AudioConnection          patchCord9(mixer1, 0, i2s1, 0);
 AudioConnection          patchCord11(mixer2, 0, i2s1, 1);
+AudioConnection          patchCord10(mixer1, 0, mixer3, 0);
+AudioConnection          patchCord12(mixer2, 0, mixer3, 3);
+AudioConnection          patchCord13(mixer3, fft256);
 
 #else
 
@@ -49,12 +49,18 @@ AudioConnection          patchCord11(mixer2, 0, i2s1, 1);
 AudioConvert_I16toF32    i16tof32l, i16tof32r;
 AudioEffectGain_F32      gain1, gain2;
 AudioOutputI2S_F32       i2s32;
+// float fft
+AudioAnalyzeFFT256_F32   fft256;
+AudioMixer4_F32          mixer3;
 AudioConnection          patchCordi01(mixer1, 0, i16tof32l, 0);
 AudioConnection          patchCordi02(mixer2, 0, i16tof32r, 0);
 AudioConnection_F32      patchCordf01(i16tof32l, 0, gain1, 0);
 AudioConnection_F32      patchCordf02(i16tof32r, 0, gain2, 0);
 AudioConnection_F32      patchCordf03(gain1, 0, i2s32, 0);
 AudioConnection_F32      patchCordf04(gain2, 0, i2s32, 1);
+AudioConnection_F32      patchCordf05(i16tof32l, 0, mixer3, 0);
+AudioConnection_F32      patchCordf06(i16tof32r, 0, mixer3, 3);
+AudioConnection_F32      patchCordf07(mixer3, 0, fft256, 0);
 
 #endif
 

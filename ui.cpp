@@ -169,14 +169,22 @@ keysdone:
 
   // row 0-3: spectrum
   for (int i = 0 ; i < 128; i++) {
-    uint16_t fftBin = fft256_1.output[i];
-    uint32_t fftBinLog = fftBin ? (32 - __builtin_clz((uint32_t)fftBin)) : 0;
-    uint32_t lsb = 0;
+#if !USE_F32
+    uint16_t fftBin = fft256.output[i];
+    int fftBinLog = fftBin ? (32 - __builtin_clz((uint32_t)fftBin)) : 0;
+    int lsb = 0;
     if (fftBinLog > 1) {
       // use the bit after the leading bit to add an approximate bit to the log
       lsb = (fftBin >> (fftBinLog - 2)) & 1;
     }
     fftBinLog = (fftBinLog << 1) | lsb;
+#else
+    float32_t fftBin = fft256.output[i];
+    fftBin *= fftBin; // 2 * log(x) = log(x^2);
+    int fftBinLog = (*((uint32_t*)&fftBin) >> 23) & 0xff; // just get exponent
+    fftBinLog -= 96;
+    fftBinLog = fftBinLog > 32 ? 32 : fftBinLog < 0 ? 0 : fftBinLog;
+#endif
     uint32_t fftBinLogMask = fftBinLog ? (0x1 << (32 - fftBinLog)) : 0;
     framebuffer[0][i] = fftBinLogMask;
     framebuffer[1][i] = fftBinLogMask >> 8;

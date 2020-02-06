@@ -89,7 +89,7 @@ bool doSerialControl(){
         break;
       case 'F':
         for (int i = 0 ; i < 128; i++) {
-          Serial.println(fft256_1.output[i]);
+          Serial.println(fft256.output[i]);
         }
         break;
       case 'G':
@@ -199,16 +199,18 @@ void setup() {
 
 ///// AUDIO
   AudioMemory(20);
+#if USE_F32
   AudioMemory_F32(8);
+#endif
 
   // mix L+R for FFT
   mixer3.gain(0, 0.5);
   mixer3.gain(3, 0.5);
 
-  fft256_1.averageTogether(2);
+  fft256.averageTogether(2);
 
   // FOR DAC SANITY
-  // sine1.amplitude(0.20);
+  // sine1.amplitude(1);
   // sine1.frequency(1000);
 
 #if !USE_F32
