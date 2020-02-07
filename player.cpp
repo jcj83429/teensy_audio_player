@@ -255,7 +255,11 @@ void seekAbsolute(uint32_t timesec) {
 void seekRelative(int dtsec) {
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
-    seekAbsolute(playingCodec->positionMillis() / 1000 + dtsec);
+    int timesec = playingCodec->positionMillis() / 1000 + dtsec;
+    if (timesec < 0) {
+      timesec = 0;
+    }
+    seekAbsolute(timesec);
   }
 }
 
