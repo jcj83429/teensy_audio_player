@@ -263,11 +263,16 @@ SdBaseFile DirectoryNavigator::prevFile() {
         }
       }
     }
+    int oldDSL = dirStackLevel;
     ret = selectItem(lastSelectedItem - 1);
     if(!ret.isOpen()){
       // normally we set lastSelectedItem when we go into a dir
       // but we want to go in reverse so set it to curDirFiles()
-      lastSelectedItem = curDirFiles();
+      // The exception is when we were already at max directory depth.
+      // In that case, we just skip the directory.
+      if(oldDSL < MAX_DIR_STACK -1){
+        lastSelectedItem = curDirFiles();
+      }
     }
   }
   return ret;
