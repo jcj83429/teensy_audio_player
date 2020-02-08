@@ -2,6 +2,9 @@
 #include <Audio.h>
 #include "eeprom_offsets.h"
 #include <EEPROM.h>
+#include "utils.h"
+#include "ui.h"
+#include "vfd.h"
 
 char fileNameCache[FILE_NAME_CACHE_SIZE];
 
@@ -197,6 +200,14 @@ SdBaseFile DirectoryNavigator::selectItem(int index) {
   suspendDecoding();
   tmpFile.open(curDir(), sortedFileIdx[dirStackLevel][index], O_RDONLY);
   resumeDecoding();
+  if(!tmpFile.isOpen()){
+    Serial.println("selectItem failed to open item");
+    printStr("SD CARD ERROR       ", 21, 0, 0, true);
+    printStr("REBOOTING...        ", 21, 0, 1, true);
+    vfdWriteFb(0);
+    delay(2000);
+    softReset();
+  }
   if(tmpFile.isDir()){
     if(dirStackLevel < MAX_DIR_STACK -1){
       dirStackLevel++;

@@ -4,7 +4,7 @@
 #define PIN_VFD_SS 10
 #define PIN_VFD_CMD_DATA 6
 #define PIN_VFD_RST 14
-#define PIN_VFD_FRP 28
+#define PIN_VFD_FRP 38
 
 #define USE_HW_CS 1
 #define USE_SPI_DMA 1

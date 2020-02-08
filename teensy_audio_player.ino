@@ -8,6 +8,7 @@
 #include "font.h"
 #include "ui.h"
 #include "player.h"
+#include "utils.h"
 #include <AudioStream_F32.h>
 
 // I2S wiring
@@ -38,7 +39,7 @@ void low_voltage_isr(void){
   // If we are still alive after 1s, reset
   delay(1000);
   Serial.end();  //clears the serial monitor  if used
-  SCB_AIRCR = 0x05FA0004;  //write value for restart
+  softReset();
 }
 
 void printStatus() {
@@ -274,20 +275,10 @@ void setup() {
 #endif
 
   vfdInit();
-
   // Set brightness to min. VFD draws too much power for USB
   vfdSend(0x4f, true);
-
-  Serial.println("VFD init done");
-
   vfdSetAutoInc(1, 0);
-
-  for (int i = 0; i < 6; i++) {
-    vfdSetCursor(0, i + 2);
-    for (int j = 0; j < 96; j++) {
-      vfdSend(ms_6x8_font[0x20 + 16 * i + j / 6][j % 6], false);
-    }
-  }
+  Serial.println("VFD init done");
 
 ///// END VFD
 
@@ -296,9 +287,15 @@ void setup() {
 
   while (!sdEx.begin()) {
     Serial.println("SdFatSdioEX begin() failed");
+    printStr("SdFatSdioEX begin() ", 21, 0, 0, true);
+    printStr("failed              ", 21, 0, 1, true);
+    vfdWriteFb(0);
     flashError(2);
   }
   Serial.println("SD init success");
+  printStr("Loading SD card     ", 21, 0, 0, false);
+  printStr("                    ", 21, 0, 1, false);
+  vfdWriteFb(0);
 
 ///// END SD CARD
 
@@ -315,6 +312,13 @@ void setup() {
 }
 
 void loop() {
+  if(sdEx.cardErrorCode()){
+    printStr("SD CARD ERROR       ", 21, 0, 0, true);
+    printStr("REBOOTING...        ", 21, 0, 1, true);
+    vfdWriteFb(0);
+    delay(2000);
+    softReset();
+  }
 
   if(doSerialControl()){
     return;

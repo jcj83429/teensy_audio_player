@@ -98,7 +98,7 @@ void printChar(char c, int x, int y, bool highlight){
   }
 }
 
-void printStr(char *s, int maxLen, int x, int y, bool highlight){
+void printStr(const char *s, int maxLen, int x, int y, bool highlight){
   while(*s && maxLen){
     printChar(*s, x, y, highlight);
     x += 6;
