@@ -5,6 +5,7 @@
 #include <Arduino.h>
 
 #define DEBOUNCE_TIME 50
+#define KEY_REPEAT_TIME 250
 
 UiModeBase *currentUiMode = new UiModeMain();
 
@@ -65,13 +66,22 @@ void updateKeyStates(){
       continue;
     }
 
-    if(keys[keyId].lastChangeTime - now > DEBOUNCE_TIME && keys[keyId].lastEventTime < keys[keyId].lastChangeTime){
-      keys[keyId].event = newState ? KEY_EV_UP : KEY_EV_DOWN;
-      keys[keyId].lastEventTime = now;
-//      Serial.print("KEY ");
-//      Serial.print(keyId);
-//      Serial.print(" EVENT ");
-//      Serial.println(keys[keyId].event);
+    if(keys[keyId].lastChangeTime - now > DEBOUNCE_TIME) {
+      if(keys[keyId].lastEventTime < keys[keyId].lastChangeTime) {
+        keys[keyId].event = newState ? KEY_EV_UP : KEY_EV_DOWN;
+        keys[keyId].lastEventTime = now;
+      } else if(!newState && now - keys[keyId].lastEventTime > KEY_REPEAT_TIME) {
+        keys[keyId].event = KEY_EV_DOWN | KEY_EV_REPEAT;
+        keys[keyId].lastEventTime = now;
+      } else {
+        keys[keyId].event = KEY_EV_NONE;
+      }
+//      if(keys[keyId].event != KEY_EV_NONE){
+//        Serial.print("KEY ");
+//        Serial.print(keyId);
+//        Serial.print(" EVENT ");
+//        Serial.println(keys[keyId].event);
+//      }
     }else{
       keys[keyId].event = KEY_EV_NONE;
     }
@@ -146,19 +156,19 @@ UiMode UiModeMain::update(){
     togglePause();
     goto keysdone;
   }
-  if(keys[KEY_PREV].event == KEY_EV_DOWN){
+  if(keys[KEY_PREV].event & KEY_EV_DOWN){
     playPrev();
     goto keysdone;
   }
-  if(keys[KEY_NEXT].event == KEY_EV_DOWN){
+  if(keys[KEY_NEXT].event & KEY_EV_DOWN){
     playNext();
     goto keysdone;
   }
-  if(keys[KEY_RWD].event == KEY_EV_DOWN){
+  if(keys[KEY_RWD].event & KEY_EV_DOWN){
     seekRelative(-5);
     goto keysdone;
   }
-  if(keys[KEY_FF].event == KEY_EV_DOWN){
+  if(keys[KEY_FF].event & KEY_EV_DOWN){
     seekRelative(+5);
     goto keysdone;
   }
@@ -241,7 +251,7 @@ UiMode UiModeFiles::update() {
     return UI_MODE_MAIN;
   }
   // NEXT key: go into dir or play file
-  if(keys[KEY_NEXT].event == KEY_EV_DOWN){
+  if(keys[KEY_NEXT].event & KEY_EV_DOWN){
     SdBaseFile selectedFile = filesModeDirNav.selectItem(highlightedIdx);
     if(selectedFile.isOpen()){
       stop();
@@ -254,15 +264,15 @@ UiMode UiModeFiles::update() {
       highlightedIdx = 0;
       updated = true;
     }
-  }else if(keys[KEY_PREV].event == KEY_EV_DOWN){
+  }else if(keys[KEY_PREV].event & KEY_EV_DOWN){
     if(filesModeDirNav.upDir()){
       highlightedIdx = filesModeDirNav.lastSelectedItem;
       updated = true;
     }
-  }else if(keys[KEY_FF].event == KEY_EV_DOWN){
+  }else if(keys[KEY_FF].event & KEY_EV_DOWN){
     highlightedIdx = (highlightedIdx + 1) % filesModeDirNav.curDirFiles();
     updated = true;
-  }else if(keys[KEY_RWD].event == KEY_EV_DOWN){
+  }else if(keys[KEY_RWD].event & KEY_EV_DOWN){
     highlightedIdx = (highlightedIdx + filesModeDirNav.curDirFiles() - 1) % filesModeDirNav.curDirFiles();
     updated = true;
   }

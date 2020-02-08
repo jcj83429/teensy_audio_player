@@ -18,9 +18,10 @@ enum KeyId {
 };
 
 typedef enum KeyEvent {
-  KEY_EV_NONE,
-  KEY_EV_DOWN,
-  KEY_EV_UP,
+  KEY_EV_NONE = 0,
+  KEY_EV_DOWN = 1,
+  KEY_EV_UP = 2,
+  KEY_EV_REPEAT = 4,
 } KeyEvent;
 
 typedef enum UiMode {
