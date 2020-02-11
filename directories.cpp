@@ -2,7 +2,7 @@
 #include <Audio.h>
 #include "eeprom_offsets.h"
 #include <EEPROM.h>
-#include "utils.h"
+#include "common.h"
 #include "ui.h"
 #include "vfd.h"
 
