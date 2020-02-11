@@ -189,9 +189,13 @@ keysdone:
     }
     fftBinLog = (fftBinLog << 1) | lsb;
 #else
+    union {
+      float32_t f;
+      uint32_t u;
+    } fu;
     float32_t fftBin = fft256.output[i];
-    fftBin *= fftBin; // 2 * log(x) = log(x^2);
-    int fftBinLog = (*((uint32_t*)&fftBin) >> 23) & 0xff; // just get exponent
+    fu.f = fftBin * fftBin; // 2 * log(x) = log(x^2);
+    int fftBinLog = (fu.u >> 23) & 0xff; // just get exponent
     fftBinLog -= 96;
     fftBinLog = fftBinLog > 32 ? 32 : fftBinLog < 0 ? 0 : fftBinLog;
 #endif

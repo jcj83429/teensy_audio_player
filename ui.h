@@ -32,7 +32,7 @@ typedef enum UiMode {
 
 struct KeyInfo {
   int pin;
-  KeyEvent event;
+  int event;
   bool lastState;
   unsigned long lastChangeTime;
   unsigned long lastEventTime;
