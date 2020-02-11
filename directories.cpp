@@ -1,6 +1,5 @@
 #include "directories.h"
 #include <Audio.h>
-#include "eeprom_offsets.h"
 #include <EEPROM.h>
 #include "common.h"
 #include "ui.h"

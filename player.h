@@ -1,9 +1,7 @@
-#define USE_F32 1
-#define USE_I2S_SLAVE 0
-
 #include <play_sd_mp3.h>
 #include <play_sd_aac.h>
 #include <play_sd_flac.h>
+#include "common.h"
 #include "mycodecfile.h"
 #include "directories.h"
 #include "analyze_fft256_f32.h"

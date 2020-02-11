@@ -1,6 +1,5 @@
 #include "player.h"
 #include <EEPROM.h>
-#include "eeprom_offsets.h"
 #include <AudioStream_F32.h>
 #include <AudioConvert_F32.h>
 #include <output_i2s_f32.h>
