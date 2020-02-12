@@ -72,6 +72,11 @@ bool isPaused = false;
 DirectoryNavigator dirNav;
 
 void startPlayback(){
+#if USE_F32
+  int8_t gain8 = EEPROM.read(EEPROM_OFFSET_VOLUME);
+  setGain(gain8);
+#endif
+
   dirNav.openRoot(SdBaseFile::cwd()->volume());
 
   currentFile = dirNav.restoreCurrentFile();
@@ -99,7 +104,7 @@ void startPlayback(){
   }
 }
 
-void savePlaybackPosition(){
+void savePlayerState(){
   uint16_t playPosSec = 0;
   AudioCodec *playingCodec = getPlayingCodec();
   if(playingCodec){
@@ -111,6 +116,11 @@ void savePlaybackPosition(){
   }
 
   dirNav.saveCurrentFile();
+
+#if USE_F32
+  int8_t gain8 = min(max(currentGain, -127), 127);
+  EEPROM.write(EEPROM_OFFSET_VOLUME, gain8);
+#endif
 }
 
 // we can't disable the audio interrupt because otherwise the audio output will glitch.

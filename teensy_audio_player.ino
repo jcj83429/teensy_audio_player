@@ -10,6 +10,7 @@
 #include "player.h"
 #include "common.h"
 #include <AudioStream_F32.h>
+#include <EEPROM.h>
 
 // I2S wiring
 // LRCLK = 23
@@ -30,7 +31,7 @@ int sampleRateIndex = 0;
 
 void low_voltage_isr(void){
   digitalWrite(LED_PIN, true);
-  savePlaybackPosition();
+  savePlayerState();
   // Fully power off by cutting off supercap.
   // The teensy can hold itself in reset until voltage recovers, 
   // but the SD card will get glitched by low voltage and never recover.
@@ -150,7 +151,7 @@ bool doSerialControl(){
         dirNav.upDir();
         break;
       case 'V':
-        savePlaybackPosition();
+        savePlayerState();
         break;
       case '>':
         seekRelative(+5);

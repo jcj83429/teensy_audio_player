@@ -37,7 +37,7 @@ extern DirectoryNavigator dirNav;
 
 void audioInit();
 void startPlayback();
-void savePlaybackPosition();
+void savePlayerState();
 void suspendDecoding();
 void resumeDecoding();
 void setSampleRate(unsigned long long sampleRate);

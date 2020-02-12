@@ -144,6 +144,11 @@ void uiUpdate(){
     case UI_MODE_FILES:
       currentUiMode = new UiModeFiles();
       break;
+#if USE_F32
+    case UI_MODE_VOLUME:
+      currentUiMode = new UiModeVolume();
+      break;
+#endif
     default:
       break;
       currentUiMode = new UiModeMain();
@@ -252,7 +257,11 @@ UiMode UiModeFiles::update() {
   unsigned long now = millis();
   // FN1 key: go back to main mode
   if(keys[KEY_FN1].event == KEY_EV_DOWN){
+#if USE_F32
+    return UI_MODE_VOLUME;
+#else
     return UI_MODE_MAIN;
+#endif
   }
   // NEXT key: go into dir or play file
   if(keys[KEY_NEXT].event & KEY_EV_DOWN){
@@ -326,3 +335,42 @@ void UiModeFiles::draw() {
     fileIdx++;
   }
 }
+
+#if USE_F32
+UiMode UiModeVolume::update() {
+  if(keys[KEY_FN1].event == KEY_EV_DOWN){
+    return UI_MODE_MAIN;
+  }
+  if(keys[KEY_FF].event & KEY_EV_DOWN){
+    float newGain = currentGain + 1;
+    newGain = min(newGain, 0);
+    setGain(newGain);
+    goto keysdone;  
+  }
+  if(keys[KEY_RWD].event & KEY_EV_DOWN){
+    float newGain = currentGain - 1;
+    newGain = max(newGain, -60);
+    setGain(newGain);
+    goto keysdone;  
+  }
+keysdone:
+
+  memset(framebuffer, 0, sizeof(framebuffer));
+  printStr("Digital Volume", 21, 0, 0, false);
+  int volumeBarLength = currentGain + 60;
+  volumeBarLength = min(max(0, volumeBarLength), 60);
+
+  for(int i = 8; i < volumeBarLength + 8; i++) {
+    framebuffer[2][i] = 0xff;
+  }
+  for(int i = volumeBarLength + 8; i < 60 + 8; i++) {
+    framebuffer[2][i] = 0x81;
+  }
+
+  printChar('-', 128 - 30, 2, false);
+  printNum(-currentGain, 2, 128 - 24, 2);
+  printStr("dB", 2, 128 - 12, 2, false);
+
+  return UI_MODE_INVALID;
+}
+#endif

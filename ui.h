@@ -1,4 +1,5 @@
 #include "directories.h"
+#include "common.h"
 
 #define PIN_KEY_PREV 24
 #define PIN_KEY_RWD  25
@@ -28,6 +29,9 @@ typedef enum UiMode {
   UI_MODE_INVALID,
   UI_MODE_MAIN,
   UI_MODE_FILES,
+#if USE_F32
+  UI_MODE_VOLUME,
+#endif
 } UiMode;
 
 struct KeyInfo {
@@ -72,3 +76,9 @@ public:
   unsigned int highlightedFnOffset;
   unsigned long lastUpdateTime;
 };
+
+#if USE_F32
+class UiModeVolume : public UiModeBase {
+  UiMode update();
+};
+#endif
