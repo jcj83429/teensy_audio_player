@@ -194,6 +194,9 @@ void DirectoryNavigator::printCurDir() {
 }
 
 SdBaseFile DirectoryNavigator::selectItem(int index) {
+  if(index >= curDirFiles()){
+    return SdBaseFile();
+  }
   lastSelectedItem = index;
   SdBaseFile tmpFile;
   suspendDecoding();
