@@ -94,6 +94,9 @@ void startPlayback(){
     return;
   }
 
+  // resume failed. go back to root.
+  while(dirNav.upDir());
+
   if (dirNav.curDirFiles()) {
     playNext();
   } else {
