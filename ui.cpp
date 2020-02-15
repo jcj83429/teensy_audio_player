@@ -265,7 +265,7 @@ UiMode UiModeFiles::update() {
   }
   // NEXT key: go into dir or play file
   if(keys[KEY_NEXT].event & KEY_EV_DOWN){
-    SdBaseFile selectedFile = filesModeDirNav.selectItem(highlightedIdx);
+    FsFile selectedFile = filesModeDirNav.selectItem(highlightedIdx);
     if(selectedFile.isOpen()){
       stop();
       currentFile = selectedFile;

@@ -64,7 +64,7 @@ AudioConnection_F32      patchCordf07(mixer3, 0, fft256, 0);
 #endif
 
 
-SdBaseFile currentFile;
+FsFile currentFile;
 char currentFileName[256];
 MyCodecFile myCodecFile(NULL);
 bool isPaused = false;
@@ -77,7 +77,7 @@ void startPlayback(){
   setGain(gain8);
 #endif
 
-  dirNav.openRoot(SdBaseFile::cwd()->volume());
+  dirNav.openRoot(&sd);
 
   currentFile = dirNav.restoreCurrentFile();
   if(currentFile.isOpen()){
@@ -192,9 +192,9 @@ void stop() {
   }
 }
 
-void playFile(SdBaseFile *file) {
-  file->getName(currentFileName, sizeof(currentFileName));
+void playFile(FsFile *file) {
   Serial.print("play file: ");
+  file->getName(currentFileName, sizeof(currentFileName));
   Serial.println(currentFileName);
 
   stop();

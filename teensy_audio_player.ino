@@ -1,4 +1,4 @@
-#include "SdFat.h"
+#include "SdFs.h"
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -24,7 +24,7 @@
 #define PIN_SUPERCAP 37
 #define SCB_AIRCR (*(volatile uint32_t *)0xE000ED0C) // Application Interrupt and Reset Control location
 
-SdFatSdioEX sdEx;
+SdFs sd;
 
 int sampleRates[] = {44100, 88200, 22050};
 int sampleRateIndex = 0;
@@ -117,7 +117,7 @@ bool doSerialControl(){
           int itemNum = atoi(strbuf);
           Serial.print("select item ");
           Serial.println(itemNum);
-          SdBaseFile tmpFile = dirNav.selectItem(itemNum);
+          FsFile tmpFile = dirNav.selectItem(itemNum);
           if (tmpFile.isOpen()) {
             stop();
             currentFile = tmpFile;
@@ -286,9 +286,9 @@ void setup() {
 
 ///// SD CARD
 
-  while (!sdEx.begin()) {
-    Serial.println("SdFatSdioEX begin() failed");
-    printStr("SdFatSdioEX begin() ", 21, 0, 0, true);
+  while (!sd.begin(SdioConfig(FIFO_SDIO))) {
+    Serial.println("SdFs begin() failed");
+    printStr("SdFs begin()        ", 21, 0, 0, true);
     printStr("failed              ", 21, 0, 1, true);
     vfdWriteFb(0);
     flashError(2);
@@ -302,8 +302,8 @@ void setup() {
 
   Serial.println("ALL INIT DONE!");
 
-  // make sdEx the current volume.
-  sdEx.chvol();
+  // make sd the current volume.
+  sd.chvol();
 
   // sdEx.ls(LS_R | LS_DATE | LS_SIZE);
 
@@ -313,7 +313,7 @@ void setup() {
 }
 
 void loop() {
-  if(sdEx.cardErrorCode()){
+  if(sd.sdErrorCode()){
     printStr("SD CARD ERROR       ", 21, 0, 0, true);
     printStr("REBOOTING...        ", 21, 0, 1, true);
     vfdWriteFb(0);

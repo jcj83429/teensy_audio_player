@@ -28,7 +28,7 @@ extern Si5351 si5351;
 
 #endif
 
-extern SdBaseFile currentFile;
+extern FsFile currentFile;
 extern char currentFileName[256];
 extern MyCodecFile myCodecFile;
 extern bool isPaused;
@@ -43,7 +43,7 @@ void resumeDecoding();
 void setSampleRate(unsigned long long sampleRate);
 AudioCodec *getPlayingCodec();
 void stop();
-void playFile(SdBaseFile *file);
+void playFile(FsFile *file);
 void playNext();
 void playPrev();
 void togglePause();

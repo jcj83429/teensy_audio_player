@@ -2,11 +2,11 @@
 #define MYCODECFILE_H
 
 #include <codecs.h>
-#include <SdFat.h>
+#include <SdFs.h>
 
 class MyCodecFile : public CodecFileBase {
 public:
-  MyCodecFile(SdBaseFile *file) {
+  MyCodecFile(FsFile *file) {
     sdFile = file;
   }
 
@@ -27,7 +27,7 @@ public:
   }
 
 protected:
-  SdBaseFile *sdFile;
+  FsFile *sdFile;
 };
 
 #endif

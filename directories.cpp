@@ -9,7 +9,7 @@ char fileNameCache[FILE_NAME_CACHE_SIZE];
 
 typedef struct FileNameCacheEntryInfo {
   uint32_t dirFirstCluster;
-  uint16_t fileIdx;
+  uint32_t fileIdx;
   uint16_t position;
 } FileNameCacheEntryInfo;
 
@@ -24,7 +24,7 @@ unsigned long long cacheSearchTime = 0;
 extern void suspendDecoding();
 extern void resumeDecoding();
 
-char * getCachedFileName(SdBaseFile *dir, uint16_t fileIdx){
+char * getCachedFileName(FsFile *dir, uint16_t fileIdx){
   unsigned long long startTime = micros();
   // first search for the file in the cache
   uint32_t dirFirstCluster = dir->firstCluster();
@@ -78,7 +78,7 @@ char * getCachedFileName(SdBaseFile *dir, uint16_t fileIdx){
 //  Serial.print("new entry at ");
 //  Serial.println(newEntryPos);
 
-  SdBaseFile tmpFile;
+  FsFile tmpFile;
   suspendDecoding();
   tmpFile.open(dir, fileIdx, O_RDONLY);
   tmpFile.getName(&fileNameCache[newEntryPos], FILE_NAME_MAX_LEN - 1); // leave 1 byte for "/" in case of dir
@@ -99,7 +99,7 @@ char * getCachedFileName(SdBaseFile *dir, uint16_t fileIdx){
   return fileNameCache + newEntryPos;
 }
 
-void quicksortFiles(SdBaseFile *dir, uint16_t *idxArr, int len) {
+void quicksortFiles(FsFile *dir, uint32_t *idxArr, int len) {
   if (len < 2) return;
 
   uint16_t pivot = idxArr[len / 2];
@@ -136,7 +136,7 @@ void quicksortFiles(SdBaseFile *dir, uint16_t *idxArr, int len) {
   quicksortFiles(dir, idxArr + i, len - i);
 }
 
-FileType getFileType(SdBaseFile *file) {
+FileType getFileType(FsFile *file) {
   if(file->isDir()){
     return FileType::DIR;
   }
@@ -172,7 +172,7 @@ void DirectoryNavigator::printCurDir() {
   Serial.print("total files: ");
   Serial.println(curDirFiles());
   for(int i=0; i<curDirFiles(); i++){
-    SdBaseFile tmpFile;
+    FsFile tmpFile;
     uint16_t dirFileIdx = sortedFileIdx[dirStackLevel][i];
     suspendDecoding();
     tmpFile.open(curDir(), dirFileIdx, O_RDONLY);
@@ -188,17 +188,17 @@ void DirectoryNavigator::printCurDir() {
     } else {
       // files have sizes, directories do not
       Serial.print("\t\t");
-      Serial.println(tmpFile.fileSize(), DEC);
+      Serial.println((uint32_t)tmpFile.fileSize(), DEC);
     }
   }
 }
 
-SdBaseFile DirectoryNavigator::selectItem(int index) {
+FsFile DirectoryNavigator::selectItem(int index) {
   if(index >= curDirFiles()){
-    return SdBaseFile();
+    return FsFile();
   }
   lastSelectedItem = index;
-  SdBaseFile tmpFile;
+  FsFile tmpFile;
   suspendDecoding();
   tmpFile.open(curDir(), sortedFileIdx[dirStackLevel][index], O_RDONLY);
   resumeDecoding();
@@ -220,14 +220,14 @@ SdBaseFile DirectoryNavigator::selectItem(int index) {
     }else{
       //error
     }
-    return SdBaseFile();
+    return FsFile();
   }else{
     return tmpFile;
   }
 }
 
-SdBaseFile DirectoryNavigator::nextFile() {
-  SdBaseFile ret;
+FsFile DirectoryNavigator::nextFile() {
+  FsFile ret;
   while(!ret.isOpen()){
     if(lastSelectedItem >= curDirFiles() - 1){
       // end of current dir
@@ -249,8 +249,8 @@ SdBaseFile DirectoryNavigator::nextFile() {
   return ret;
 }
 
-SdBaseFile DirectoryNavigator::prevFile() {
-  SdBaseFile ret;
+FsFile DirectoryNavigator::prevFile() {
+  FsFile ret;
   while(!ret.isOpen()){
     if(lastSelectedItem <= 0){
       if(dirStackLevel > 0){
@@ -308,27 +308,27 @@ void DirectoryNavigator::saveCurrentFile(){
   EEPROM.write(EEPROM_OFFSET_DIRSTACK + offset, lastSelectedItem);
 }
 
-SdBaseFile DirectoryNavigator::restoreCurrentFile(){
-  SdBaseFile ret;
+FsFile DirectoryNavigator::restoreCurrentFile(){
+  FsFile ret;
   while(upDir()); // go to root dir
   for(int i = 0; i < MAX_DIR_STACK; i++){
     int itemIdx = EEPROM.read(EEPROM_OFFSET_DIRSTACK + i);
     if(itemIdx >= curDirFiles()){
-      return SdBaseFile(); // error
+      return FsFile(); // error
     }
     ret = selectItem(itemIdx);
     if(ret.isOpen()){
       return ret;
     }
   }
-  return SdBaseFile(); // error
+  return FsFile(); // error
 }
 
 void DirectoryNavigator::loadCurDir() {
   unsigned long long startTime = micros();
   int nf = 0;
   while(nf < MAX_DIR_FILES){
-    SdBaseFile tmpFile;
+    FsFile tmpFile;
     suspendDecoding();
     if(!tmpFile.openNext(curDir())){
       resumeDecoding();
