@@ -2,7 +2,7 @@
 #define MYCODECFILE_H
 
 #include <codecs.h>
-#include <SdFs.h>
+#include <SdFat.h>
 
 class MyCodecFile : public CodecFileBase {
 public:

@@ -1,7 +1,7 @@
 #ifndef DIRECTORIES_H
 #define DIRECTORIES_H
 
-#include "SdFs.h"
+#include "SdFat.h"
 
 #define FILE_NAME_MAX_LEN 256
 #define FILE_NAME_CACHE_SIZE 10000
