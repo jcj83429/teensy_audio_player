@@ -152,6 +152,8 @@ void resumeDecoding() {
 }
 
 void setSampleRate(unsigned long long sampleRate) {
+  Serial.print("changing sample rate to ");
+  Serial.println((int)sampleRate);
 #if USE_I2S_SLAVE
   uint8_t error;
   // sometimes the sample rate setting doens't go through, so repeate 3 times
@@ -171,10 +173,12 @@ void setSampleRate(unsigned long long sampleRate) {
       return;
     }
   }
-  Serial.print("sample rate changed to ");
-  Serial.println((int)sampleRate);
+#else
+  float result = setI2SFreq(sampleRate);
+  if(!result){
+    Serial.println("sample rate not supported");
+  }
 #endif
-  // sample rate change for master needs to be implemented
 }
 
 AudioCodec *getPlayingCodec() {
@@ -226,6 +230,10 @@ void playFile(FsFile *file) {
   Serial.print("error: 0x");
   Serial.println(error, HEX);
   isPaused = false;
+
+  if(!error){
+    setSampleRate(getPlayingCodec()->sampleRate());
+  }
 }
 
 void playNext() {
