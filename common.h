@@ -5,6 +5,7 @@
 
 #define USE_F32 1
 #define USE_I2S_SLAVE 0
+#define DAC_MAX_SAMPLE_RATE 96000
 
 // 2 bytes
 #define EEPROM_OFFSET_PLAYTIME 0

@@ -179,6 +179,13 @@ void setSampleRate(unsigned long long sampleRate) {
     Serial.println("sample rate not supported");
   }
 #endif
+  if(sampleRate <= 24000){
+    fft256.averageTogether(1);
+  }else if(sampleRate <= 48000){
+    fft256.averageTogether(2);
+  }else{
+    fft256.averageTogether(4);
+  }
 }
 
 AudioCodec *getPlayingCodec() {
@@ -232,7 +239,12 @@ void playFile(FsFile *file) {
   isPaused = false;
 
   if(!error){
-    setSampleRate(getPlayingCodec()->sampleRate());
+    uint32_t sr = getPlayingCodec()->sampleRate();
+    if(sr > DAC_MAX_SAMPLE_RATE){
+      stop();
+    }else{
+      setSampleRate(sr);
+    }
   }
 }
 

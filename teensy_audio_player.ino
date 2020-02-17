@@ -26,9 +26,6 @@
 
 SdFs sd;
 
-int sampleRates[] = {44100, 88200, 22050};
-int sampleRateIndex = 0;
-
 void low_voltage_isr(void){
   digitalWrite(LED_PIN, true);
   savePlayerState();
@@ -137,10 +134,6 @@ bool doSerialControl(){
       case 'P':
         playPrev();
         break;
-      case 'R':
-        sampleRateIndex = (sampleRateIndex + 1) % 3;
-        setSampleRate(sampleRates[sampleRateIndex]);
-        break;
       case 'S':
         printStatus();
         break;
@@ -229,8 +222,6 @@ void setup() {
   }
 #endif
 #endif
-
-  setSampleRate(44100);
 ///// END AUDIO
 
 ///// VFD
