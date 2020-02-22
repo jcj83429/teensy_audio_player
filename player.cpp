@@ -1,4 +1,5 @@
 #include "player.h"
+#include "ui.h"
 #include <EEPROM.h>
 #include <AudioStream_F32.h>
 #include <AudioConvert_F32.h>
@@ -241,10 +242,15 @@ void playFile(FsFile *file) {
   if(!error){
     uint32_t sr = getPlayingCodec()->sampleRate();
     if(sr > DAC_MAX_SAMPLE_RATE){
+      char srStr[21];
+      snprintf(srStr, 21, "%-20lu", sr);
+      displayError("UNSUP. SAMPLE RATE: ", srStr, 3000);
       stop();
     }else{
       setSampleRate(sr);
     }
+  }else{
+    displayError("UNSUP. FILE SKIPPED:", currentFileName, 3000);
   }
 }
 

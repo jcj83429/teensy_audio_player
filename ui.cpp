@@ -157,12 +157,12 @@ void uiUpdate(){
 
   if(errorMsgEndTime){
     for(int i = 0; i < NUM_KEYS; i++){
-      if(keys[i].event){
+      if(keys[i].event & KEY_EV_DOWN){
         Serial.print("key ");
         Serial.print(i);
         Serial.print(" event ");
-        Serial.println(keys[i].event);
-        Serial.println("clear error");
+        Serial.print(keys[i].event);
+        Serial.println(" clear error");
         clearError();
         break;
       }
