@@ -86,6 +86,9 @@ bool doSerialControl(){
     switch (c) {
       case '\n':
         break;
+      case 'E':
+        displayError("TEST ERROR", "TEST ERROR", 10000);
+        break;
       case 'F':
         for (int i = 0 ; i < 128; i++) {
           Serial.println(fft256.output[i]);
@@ -300,7 +303,7 @@ void setup() {
 
   startPlayback();
 
-  updateKeyStates();
+  initKeyStates();
 }
 
 void loop() {

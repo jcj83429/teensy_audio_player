@@ -45,30 +45,33 @@ struct KeyInfo {
 extern struct KeyInfo keys[];
 
 void updateKeyStates();
+void initKeyStates();
 void printChar(char c, int x, int y, bool highlight);
 void printStr(const char *s, int maxLen, int x, int y, bool highlight);
 void printNum(int n, int digits, int x, int y);
 void printTime(int timesec, int x, int y);
 void uiWriteFb();
 void uiUpdate();
+void displayError(const char *line0, const char *line1, unsigned long duration);
+void clearError();
 
 class UiModeBase {
 public:
   virtual ~UiModeBase() {};
   // process key events, update framebuffer, and return next UiMode
-  virtual UiMode update() = 0;
+  virtual UiMode update(bool redraw) = 0;
 };
 
 class UiModeMain : public UiModeBase {
 public:
-  UiMode update();
+  UiMode update(bool redraw);
 };
 
 class UiModeFiles : public UiModeBase {
 public:
   UiModeFiles();
   ~UiModeFiles();
-  UiMode update();
+  UiMode update(bool redraw);
 
   void draw();
 
@@ -80,6 +83,6 @@ public:
 
 #if USE_F32
 class UiModeVolume : public UiModeBase {
-  UiMode update();
+  UiMode update(bool redraw);
 };
 #endif

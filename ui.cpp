@@ -11,6 +11,9 @@ UiModeBase *currentUiMode = new UiModeMain();
 
 uint8_t framebuffer[8][128];
 
+char errorMsg[2][20] = {0};
+unsigned long errorMsgEndTime = 0;
+
 struct KeyInfo keys[] = {
   [KEY_PREV] = {
     .pin = PIN_KEY_PREV,
@@ -68,7 +71,7 @@ void updateKeyStates(){
       continue;
     }
 
-    if(keys[keyId].lastChangeTime - now > DEBOUNCE_TIME) {
+    if(now - keys[keyId].lastChangeTime > DEBOUNCE_TIME) {
       if(keys[keyId].lastEventTime < keys[keyId].lastChangeTime) {
         keys[keyId].event = newState ? KEY_EV_UP : KEY_EV_DOWN;
         keys[keyId].lastEventTime = now;
@@ -87,6 +90,13 @@ void updateKeyStates(){
     }else{
       keys[keyId].event = KEY_EV_NONE;
     }
+  }
+}
+
+void initKeyStates(){
+  updateKeyStates();
+  for(int i=0; i<NUM_KEYS; i++){
+    keys[i].lastEventTime = keys[i].lastChangeTime;
   }
 }
 
@@ -136,9 +146,38 @@ void uiWriteFb(){
   vfdWriteFb(&framebuffer[0][0], 0);
 }
 
+void renderError(){
+  for(int i = 0; i < 2; i++){
+    printStr(errorMsg[i], 20, 0, i, true);
+  }
+}
+
 void uiUpdate(){
   updateKeyStates();
-  UiMode newMode = currentUiMode->update();
+
+  if(errorMsgEndTime){
+    for(int i = 0; i < NUM_KEYS; i++){
+      if(keys[i].event){
+        Serial.print("key ");
+        Serial.print(i);
+        Serial.print(" event ");
+        Serial.println(keys[i].event);
+        Serial.println("clear error");
+        clearError();
+        break;
+      }
+    }
+  }
+
+  bool forceRedraw = false;
+  if(errorMsgEndTime - millis() >= 0x80000000){
+    // error msg expired
+    errorMsgEndTime = 0;
+    forceRedraw = true;
+  }
+
+  UiMode newMode = currentUiMode->update(forceRedraw);
+
   if(newMode != UI_MODE_INVALID){
     Serial.print("change UI mode to ");
     Serial.println(newMode);
@@ -160,9 +199,30 @@ void uiUpdate(){
       currentUiMode = new UiModeMain();
     }
   }
+
+  if(errorMsgEndTime){
+    renderError();
+  }
 }
 
-UiMode UiModeMain::update(){
+void displayError(const char *line0, const char*line1, unsigned long duration){
+  strncpy(errorMsg[0], line0, 20);
+  strncpy(errorMsg[1], line1, 20);
+  errorMsgEndTime = millis() + duration;
+  if(!errorMsgEndTime){
+    errorMsgEndTime = 1;
+  }
+  // immediately write to screen
+  renderError();
+  uiWriteFb();
+}
+
+void clearError(){
+  // set it to now instead of 0 so uiUpdate() can treat it as an expiry and force redraw
+  errorMsgEndTime = millis();
+}
+
+UiMode UiModeMain::update(bool redraw){
   if(keys[KEY_PLAY].event == KEY_EV_DOWN){
     togglePause();
     goto keysdone;
@@ -258,7 +318,7 @@ UiModeFiles::UiModeFiles(){
 UiModeFiles::~UiModeFiles(){
 }
 
-UiMode UiModeFiles::update() {
+UiMode UiModeFiles::update(bool redraw) {
   bool updated = false;
   unsigned long now = millis();
   // FN1 key: go back to main mode
@@ -316,6 +376,8 @@ UiMode UiModeFiles::update() {
   if(updated){
     draw();
     lastUpdateTime = now;
+  }else if(redraw){
+    draw();
   }
   return UI_MODE_INVALID;
 }
@@ -343,7 +405,7 @@ void UiModeFiles::draw() {
 }
 
 #if USE_F32
-UiMode UiModeVolume::update() {
+UiMode UiModeVolume::update(bool redraw) {
   if(keys[KEY_FN1].event == KEY_EV_DOWN){
     return UI_MODE_MAIN;
   }
