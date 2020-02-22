@@ -21,7 +21,6 @@
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 #define LED_PIN 13
 
-#define PIN_SUPERCAP 37
 #define SCB_AIRCR (*(volatile uint32_t *)0xE000ED0C) // Application Interrupt and Reset Control location
 
 SdFs sd;
@@ -29,11 +28,6 @@ SdFs sd;
 void low_voltage_isr(void){
   digitalWrite(LED_PIN, true);
   savePlayerState();
-  // Fully power off by cutting off supercap.
-  // The teensy can hold itself in reset until voltage recovers, 
-  // but the SD card will get glitched by low voltage and never recover.
-  // So make sure the power is completely off
-  digitalWrite(37, LOW);
   // If we are still alive after 1s, reset
   delay(1000);
   Serial.end();  //clears the serial monitor  if used
@@ -164,8 +158,6 @@ bool doSerialControl(){
 }
 
 void setup() {
-  pinMode(PIN_SUPERCAP, OUTPUT);
-  digitalWrite(PIN_SUPERCAP, HIGH);
   delay(100);
   // clear low voltage detection
   PMC_LVDSC2 |= PMC_LVDSC2_LVWACK;
