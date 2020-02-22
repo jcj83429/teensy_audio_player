@@ -5,7 +5,8 @@
 #include <Arduino.h>
 
 #define DEBOUNCE_TIME 50
-#define KEY_REPEAT_TIME 250
+#define KEY_REPEAT_TIME 100
+#define KEY_REPEAT_DELAY 250
 
 UiModeBase *currentUiMode = new UiModeMain();
 
@@ -75,7 +76,7 @@ void updateKeyStates(){
       if(keys[keyId].lastEventTime < keys[keyId].lastChangeTime) {
         keys[keyId].event = newState ? KEY_EV_UP : KEY_EV_DOWN;
         keys[keyId].lastEventTime = now;
-      } else if(!newState && now - keys[keyId].lastEventTime > KEY_REPEAT_TIME) {
+      } else if(!newState && now - keys[keyId].lastChangeTime > KEY_REPEAT_DELAY && now - keys[keyId].lastEventTime > KEY_REPEAT_TIME) {
         keys[keyId].event = KEY_EV_DOWN | KEY_EV_REPEAT;
         keys[keyId].lastEventTime = now;
       } else {
