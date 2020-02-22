@@ -11,11 +11,10 @@
 
 #define DUMPVAL(x) do{ Serial.print(#x); Serial.print(": "); Serial.println(x, HEX); }while(0);
 
-extern uint8_t framebuffer[8][128];
-
 void vfdSend(uint8_t value, bool isCommand);
 void vfdSetGram(bool isGram1);
 void vfdInit();
 void vfdSetCursor(int x, int y);
 void vfdSetAutoInc(bool dx, bool dy);
-void vfdWriteFb(bool isGram1);
+// each byte in the fb is a 1x8 column of pixels. the fb is organized in rows of these columns of pixels.
+void vfdWriteFb(uint8_t *fb, bool isGram1);

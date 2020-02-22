@@ -206,7 +206,7 @@ FsFile DirectoryNavigator::selectItem(int index) {
     Serial.println("selectItem failed to open item");
     printStr("SD CARD ERROR       ", 21, 0, 0, true);
     printStr("REBOOTING...        ", 21, 0, 1, true);
-    vfdWriteFb(0);
+    uiWriteFb();
     delay(2000);
     softReset();
   }

@@ -49,6 +49,7 @@ void printChar(char c, int x, int y, bool highlight);
 void printStr(const char *s, int maxLen, int x, int y, bool highlight);
 void printNum(int n, int digits, int x, int y);
 void printTime(int timesec, int x, int y);
+void uiWriteFb();
 void uiUpdate();
 
 class UiModeBase {

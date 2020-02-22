@@ -9,6 +9,8 @@
 
 UiModeBase *currentUiMode = new UiModeMain();
 
+uint8_t framebuffer[8][128];
+
 struct KeyInfo keys[] = {
   [KEY_PREV] = {
     .pin = PIN_KEY_PREV,
@@ -128,6 +130,10 @@ void printTime(int timesec, int x, int y){
   printNum(mins, 2, x, y);
   printChar(':', x + 12, y, false);
   printNum(secs, 2, x + 18, y);
+}
+
+void uiWriteFb(){
+  vfdWriteFb(&framebuffer[0][0], 0);
 }
 
 void uiUpdate(){

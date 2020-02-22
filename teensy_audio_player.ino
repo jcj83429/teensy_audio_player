@@ -281,13 +281,13 @@ void setup() {
     Serial.println("SdFs begin() failed");
     printStr("SdFs begin()        ", 21, 0, 0, true);
     printStr("failed              ", 21, 0, 1, true);
-    vfdWriteFb(0);
+    uiWriteFb();
     flashError(2);
   }
   Serial.println("SD init success");
   printStr("Loading SD card     ", 21, 0, 0, false);
   printStr("                    ", 21, 0, 1, false);
-  vfdWriteFb(0);
+  uiWriteFb();
 
 ///// END SD CARD
 
@@ -307,7 +307,7 @@ void loop() {
   if(sd.sdErrorCode()){
     printStr("SD CARD ERROR       ", 21, 0, 0, true);
     printStr("REBOOTING...        ", 21, 0, 1, true);
-    vfdWriteFb(0);
+    uiWriteFb();
     delay(2000);
     softReset();
   }
@@ -322,5 +322,5 @@ void loop() {
 
   uiUpdate();
 
-  vfdWriteFb(0);
+  uiWriteFb();
 }

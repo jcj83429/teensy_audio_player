@@ -1,8 +1,6 @@
 #include <SPI.h>
 #include "vfd.h"
 
-uint8_t framebuffer[8][128];
-
 #if USE_HW_CS
 
 #if USE_SPI_DMA
@@ -40,7 +38,9 @@ void vfdSetGram(bool isGram1) {
 }
 
 void vfdInit() {
+#if USE_SPI_DMA
   vfdSpiDma = new DMAChannel();
+#endif
 
   // clear
   vfdSend(0x5f, true);
@@ -67,7 +67,7 @@ void vfdSetAutoInc(bool dx, bool dy) {
   vfdSend(0x80 | (dx << 2) | (dy << 1), true);
 }
 
-void vfdWriteFb(bool isGram1) {
+void vfdWriteFb(uint8_t *fb, bool isGram1) {
   uint8_t baseY = isGram1 ? 8 : 0;
 #if (USE_HW_CS && USE_SPI_DMA)
   int cmdIdx = 0;
@@ -77,8 +77,8 @@ void vfdWriteFb(bool isGram1) {
     vfdcmdbuf[cmdIdx++] = spiCmd(0, true);
     vfdcmdbuf[cmdIdx++] = spiCmd(0x60, true);
     vfdcmdbuf[cmdIdx++] = spiCmd(y, true);
-    for(int j=0; j<128; j++){
-      vfdcmdbuf[cmdIdx++] = spiCmd(framebuffer[i][j], false);
+    for(int j = 128 * i; j < 128 * (i + 1); j++){
+      vfdcmdbuf[cmdIdx++] = spiCmd(fb[j], false);
     }
   }
   /*
@@ -109,8 +109,8 @@ void vfdWriteFb(bool isGram1) {
 #else
   for(int i=0; i<8; i++){
     vfdSetCursor(0, baseY + i);
-    for(int j=0; j<128; j++){
-      vfdSend(framebuffer[i][j], false);
+    for(int j = 128 * i; j < 128 * (i + 1); j++){
+      vfdSend(fb[j], false);
     }
   }
 #endif
