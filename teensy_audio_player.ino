@@ -61,16 +61,6 @@ void printStatus() {
   Serial.println();
 }
 
-void flashError(int error) {
-  for (int i = 0; i < error; i++) {
-    digitalWrite(LED_PIN, HIGH);
-    delay(250);
-    digitalWrite(LED_PIN, LOW);
-    delay(250);
-  }
-  delay(1000);
-}
-
 void testSeek() {
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
@@ -220,7 +210,7 @@ void setup() {
   } else {
     while (1) {
       Serial.println("si5351 not found");
-      flashError(1);
+      delay(100);
     }
   }
 #endif
@@ -282,11 +272,9 @@ void setup() {
 
   while (!sd.begin(SdioConfig(FIFO_SDIO))) {
     Serial.println("SdFs begin() failed");
-    printStr("SdFs begin()        ", 21, 0, 0, true);
-    printStr("failed              ", 21, 0, 1, true);
-    uiWriteFb();
-    flashError(2);
+    displayError("SdFs begin() failed ", "                    ", 10000);
   }
+  clearError();
   Serial.println("SD init success");
   printStr("Loading SD card     ", 21, 0, 0, false);
   printStr("                    ", 21, 0, 1, false);
@@ -308,9 +296,7 @@ void setup() {
 
 void loop() {
   if(sd.sdErrorCode()){
-    printStr("SD CARD ERROR       ", 21, 0, 0, true);
-    printStr("REBOOTING...        ", 21, 0, 1, true);
-    uiWriteFb();
+    displayError("SD CARD ERROR       ", "REBOOTING...        ", 10000);
     delay(2000);
     softReset();
   }

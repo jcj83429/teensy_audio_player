@@ -81,6 +81,11 @@ char * getCachedFileName(FsFile *dir, uint16_t fileIdx){
   FsFile tmpFile;
   suspendDecoding();
   tmpFile.open(dir, fileIdx, O_RDONLY);
+  if(!tmpFile.isOpen()){
+    displayError("SD CARD ERROR       ", "REBOOTING...        ", 10000);
+    delay(2000);
+    softReset();
+  }
   tmpFile.getName(&fileNameCache[newEntryPos], FILE_NAME_MAX_LEN - 1); // leave 1 byte for "/" in case of dir
   resumeDecoding();
   if(tmpFile.isDir()){
@@ -204,9 +209,7 @@ FsFile DirectoryNavigator::selectItem(int index) {
   resumeDecoding();
   if(!tmpFile.isOpen()){
     Serial.println("selectItem failed to open item");
-    printStr("SD CARD ERROR       ", 21, 0, 0, true);
-    printStr("REBOOTING...        ", 21, 0, 1, true);
-    uiWriteFb();
+    displayError("SD CARD ERROR       ", "REBOOTING...        ", 10000);
     delay(2000);
     softReset();
   }
