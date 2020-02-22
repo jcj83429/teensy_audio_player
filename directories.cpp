@@ -82,6 +82,7 @@ char * getCachedFileName(FsFile *dir, uint16_t fileIdx){
   suspendDecoding();
   tmpFile.open(dir, fileIdx, O_RDONLY);
   if(!tmpFile.isOpen()){
+    Serial.println("getCachedFileName file open failed");
     displayError("SD CARD ERROR       ", "REBOOTING...        ", 10000);
     delay(2000);
     softReset();
@@ -221,7 +222,7 @@ FsFile DirectoryNavigator::selectItem(int index) {
       loadCurDir();
       lastSelectedItem = -1;
     }else{
-      //error
+      displayError("DIR DEPTH LIMIT (4) ", "REACHED             ", 5000);
     }
     return FsFile();
   }else{
@@ -231,6 +232,7 @@ FsFile DirectoryNavigator::selectItem(int index) {
 
 FsFile DirectoryNavigator::nextFile() {
   FsFile ret;
+  int laps = 0;
   while(!ret.isOpen()){
     if(lastSelectedItem >= curDirFiles() - 1){
       // end of current dir
@@ -239,6 +241,11 @@ FsFile DirectoryNavigator::nextFile() {
         continue;
       }else{
         if(curDirFiles()){
+          if(laps){
+            return ret;
+          }else{
+            laps++;
+          }
           // if we're at root, we can't go up. so start from beginning again.
           lastSelectedItem = -1;
         }else{
@@ -254,6 +261,7 @@ FsFile DirectoryNavigator::nextFile() {
 
 FsFile DirectoryNavigator::prevFile() {
   FsFile ret;
+  int laps = 0;
   while(!ret.isOpen()){
     if(lastSelectedItem <= 0){
       if(dirStackLevel > 0){
@@ -261,6 +269,11 @@ FsFile DirectoryNavigator::prevFile() {
         continue;
       }else{
         if(curDirFiles()){
+          if(laps){
+            return ret;
+          }else{
+            laps++;
+          }
           lastSelectedItem = curDirFiles();
         }else{
           // no files at root
@@ -345,6 +358,9 @@ void DirectoryNavigator::loadCurDir() {
     sortedFileIdx[dirStackLevel][nf] = tmpFile.dirIndex();
     nf++;
     resumeDecoding();
+  }
+  if(nf == MAX_DIR_FILES){
+    displayError("DIR CHILD LIMIT     ", "(256) REACHED       ", 5000);
   }
   numFiles[dirStackLevel] = nf;
   

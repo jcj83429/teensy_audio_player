@@ -66,7 +66,7 @@ AudioConnection_F32      patchCordf07(mixer3, 0, fft256, 0);
 
 
 FsFile currentFile;
-char currentFileName[256];
+char currentFileName[256] = {0};
 MyCodecFile myCodecFile(NULL);
 bool isPaused = false;
 
@@ -98,9 +98,8 @@ void startPlayback(){
   // resume failed. go back to root.
   while(dirNav.upDir());
 
-  if (dirNav.curDirFiles()) {
-    playNext();
-  } else {
+  if (!playNext()) {
+    displayError("NO FILES            ", "                    ", 10000);
     while (true) {
       Serial.println("NO FILES");
       delay(1000);
@@ -254,16 +253,27 @@ void playFile(FsFile *file) {
   }
 }
 
-void playNext() {
+bool playNext() {
   stop();
   currentFile = dirNav.nextFile();
-  playFile(&currentFile);
+  if(currentFile.isOpen()){
+    playFile(&currentFile);
+    return true;
+  }else{
+    return false;
+  }
 }
 
-void playPrev() {
+bool playPrev() {
   stop();
   currentFile = dirNav.prevFile();
-  playFile(&currentFile);
+  if(currentFile.isOpen()){
+    playFile(&currentFile);
+    return true;
+  }else{
+    return false;
+  }
+  
 }
 
 void togglePause() {
