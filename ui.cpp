@@ -299,9 +299,12 @@ filenameend:
 
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
-    printTime(playingCodec->lengthMillis() / 1000, 128 - 5 * 6, 7);
-    printChar('/', 128 - 6 * 6, 7, false);
-    printTime(playingCodec->positionMillis() / 1000, 128 - 11 * 6, 7);
+    uint32_t posMs = playingCodec->positionMillis();
+    uint32_t lenMs = playingCodec->lengthMillis();
+    int timePos = posMs * (128 - 11 * 6) / lenMs;
+    printTime(playingCodec->positionMillis() / 1000, timePos, 7);
+    printChar('/', timePos + 30, 7, false);
+    printTime(playingCodec->lengthMillis() / 1000, timePos + 36, 7);
   }
 
   return UI_MODE_INVALID;
