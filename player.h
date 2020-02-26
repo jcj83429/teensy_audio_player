@@ -52,5 +52,9 @@ void seekRelative(int dtsec);
 
 #if USE_F32
 extern float currentGain;
+extern bool useReplayGain;
+extern bool preferAlbumGain;
 void setGain(float32_t dB);
+void setReplayGainSettings(bool enable, bool preferAlbum);
+float effectiveReplayGain();
 #endif

@@ -52,6 +52,11 @@ void printStatus() {
     Serial.print(playingCodec->lengthMillis());
   }
 
+#if USE_F32
+  Serial.print(" effective replay gain: ");
+  Serial.print(effectiveReplayGain());
+#endif
+
   Serial.println();
 }
 
@@ -60,6 +65,18 @@ void testSeek() {
   if (playingCodec) {
     uint32_t seekToTime = random(0, (int)playingCodec->lengthMillis() * 0.9 / 1000);
     seekAbsolute(seekToTime);
+  }
+}
+
+void cycleReplayGain(){
+  if(!useReplayGain){
+    setReplayGainSettings(true, false);
+  }else{
+    if(!preferAlbumGain){
+      setReplayGainSettings(true, true);
+    }else{
+      setReplayGainSettings(false, false);
+    }
   }
 }
 
@@ -120,6 +137,9 @@ bool doSerialControl(){
         break;
       case 'P':
         playPrev();
+        break;
+      case 'R':
+        cycleReplayGain();
         break;
       case 'S':
         printStatus();

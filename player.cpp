@@ -76,6 +76,8 @@ void startPlayback(){
 #if USE_F32
   int8_t gain8 = EEPROM.read(EEPROM_OFFSET_VOLUME);
   setGain(gain8);
+  int8_t rgSettings = EEPROM.read(EEPROM_OFFSET_REPLAYGAIN);
+  setReplayGainSettings(rgSettings & 1, (rgSettings >> 1) & 1);
 #endif
 
   dirNav.openRoot(&sd);
@@ -123,6 +125,8 @@ void savePlayerState(){
 #if USE_F32
   int8_t gain8 = min(max(currentGain, -127), 127);
   EEPROM.write(EEPROM_OFFSET_VOLUME, gain8);
+  int8_t rgSettings = (preferAlbumGain << 1) | useReplayGain;
+  EEPROM.write(EEPROM_OFFSET_REPLAYGAIN, rgSettings);
 #endif
 }
 
@@ -239,7 +243,9 @@ void playFile(FsFile *file) {
   isPaused = false;
 
   if(!error){
-    uint32_t sr = getPlayingCodec()->sampleRate();
+    AudioCodec *playingCodec = getPlayingCodec();
+    
+    uint32_t sr = playingCodec->sampleRate();
     if(sr > DAC_MAX_SAMPLE_RATE){
       char srStr[21];
       snprintf(srStr, 21, "%-20lu", sr);
@@ -248,6 +254,14 @@ void playFile(FsFile *file) {
     }else{
       setSampleRate(sr);
     }
+
+#if USE_F32
+    Serial.print("RG peak: ");
+    Serial.println(playingCodec->replaygainPeak(false));
+    Serial.print("RG gain: ");
+    Serial.println(playingCodec->replaygainGainDb(false));
+    setGain(currentGain); // apply new replaygain
+#endif
   }else{
     displayError("UNSUP. FILE SKIPPED:", currentFileName, 3000);
   }
@@ -313,11 +327,54 @@ void seekRelative(int dtsec) {
 
 #if USE_F32
 float currentGain = 0;
+bool useReplayGain = false;
+bool preferAlbumGain = false;
+
 void setGain(float dB) {
   Serial.print("setting gain to ");
   Serial.println(dB);
   currentGain = dB;
+
+  dB += effectiveReplayGain();
+  Serial.print("effective gain (with RG): ");
+  Serial.println(dB);
+  
   gain1.setGain_dB(dB);
   gain2.setGain_dB(dB);
+}
+
+void setReplayGainSettings(bool enable, bool preferAlbum){
+  useReplayGain = enable;
+  preferAlbumGain = preferAlbum;
+  setGain(currentGain);
+}
+
+float effectiveReplayGain(){
+  if(!useReplayGain){
+    return 0;
+  }
+
+  AudioCodec *playingCodec = getPlayingCodec();
+  if(!playingCodec){
+    return 0;
+  }
+
+  float replayGain = playingCodec->replaygainGainDb(preferAlbumGain);
+  float peak = playingCodec->replaygainPeak(preferAlbumGain);
+  if(isnan(replayGain)){
+    // try the other one
+    replayGain = playingCodec->replaygainGainDb(!preferAlbumGain);
+    peak = playingCodec->replaygainPeak(!preferAlbumGain);
+  }
+  if(isnan(replayGain)){
+    return 0;
+  }
+  
+  float peakDb = log10(peak) * 20;
+  float peakAfterGain = peakDb + currentGain + replayGain;
+  if(peakAfterGain > 0){
+    replayGain -= peakAfterGain;
+  }
+  return replayGain;
 }
 #endif

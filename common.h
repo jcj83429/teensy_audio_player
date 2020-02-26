@@ -13,6 +13,8 @@
 #define EEPROM_OFFSET_DIRSTACK (EEPROM_OFFSET_PLAYTIME + 2)
 // 1 byte
 #define EEPROM_OFFSET_VOLUME   (EEPROM_OFFSET_DIRSTACK + 4)
+// 1 byte
+#define EEPROM_OFFSET_REPLAYGAIN (EEPROM_OFFSET_VOLUME + 1)
 
 static inline void softReset(){
   SCB_AIRCR = 0x05FA0004;  //write value for restart
