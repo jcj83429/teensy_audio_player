@@ -439,9 +439,14 @@ keysdone:
     framebuffer[2][i] = 0x81;
   }
 
-  printChar('-', 128 - 30, 2, false);
-  printNum(-currentGain, 2, 128 - 24, 2);
-  printStr("dB", 2, 128 - 12, 2, false);
+  char strbuf[10] = {0};
+  snprintf(strbuf, 10, "%3.2ddB", (int)currentGain);
+  printStr(strbuf, 5, 128-30, 2, false);
+
+  printStr("ReplayGain", 21, 0, 4, false);
+  printStr("Effective:", 21, 12, 5, false);
+  snprintf(strbuf, 10, "%+5.1fdB", effectiveReplayGain());
+  printStr(strbuf, 7, 128 - 42, 5, false);
 
   return UI_MODE_INVALID;
 }
