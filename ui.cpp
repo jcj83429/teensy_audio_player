@@ -424,6 +424,12 @@ UiMode UiModeVolume::update(bool redraw) {
       case 1:
         setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % 3));
         break;
+      case 2: {
+        float newFbGain = rgFallbackGain + 1;
+        newFbGain = min(newFbGain, 0);
+        setReplayGainFallbackGain(newFbGain);
+        break;
+      }
       default:
         break;
     }
@@ -440,17 +446,23 @@ UiMode UiModeVolume::update(bool redraw) {
       case 1:
         setReplayGainMode((ReplayGainMode)((replayGainMode + 1 + REPLAY_GAIN_MODES) % 3));
         break;
+      case 2: {
+        float newFbGain = rgFallbackGain - 1;
+        newFbGain = max(newFbGain, -60);
+        setReplayGainFallbackGain(newFbGain);
+        break;
+      }
       default:
         break;
     }
     goto keysdone;
   }
   if(keys[KEY_FF].event == KEY_EV_DOWN){
-    selectedSetting = (selectedSetting + 1) % 2;
+    selectedSetting = (selectedSetting + 1) % numSettings;
     goto keysdone;
   }
   if(keys[KEY_RWD].event == KEY_EV_DOWN){
-    selectedSetting = (selectedSetting - 1 + 2) % 2;
+    selectedSetting = (selectedSetting - 1 + numSettings) % numSettings;
     goto keysdone;
   }
 keysdone:
@@ -477,9 +489,13 @@ keysdone:
       break;
   }
 
-  printStr("Effective RG", 21, 12, 3, false);
+  printStr("RG Fallback", 21, 12, 3, false);
+  snprintf(strbuf, 10, "%3.2ddB", (int)rgFallbackGain);
+  printStr(strbuf, 5, 128-30, 3, false);
+
+  printStr("Effective RG", 21, 12, 4, false);
   snprintf(strbuf, 10, "%+5.1fdB", effectiveReplayGain());
-  printStr(strbuf, 7, 128 - 42, 3, false);
+  printStr(strbuf, 7, 128 - 42, 4, false);
 
   int highlightRow;
   switch(selectedSetting){
@@ -489,6 +505,9 @@ keysdone:
       break;
     case 1:
       highlightRow = 2;
+      break;
+    case 2:
+      highlightRow = 3;
       break;
   }
   for(int i = 0; i < 128; i++){

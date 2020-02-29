@@ -78,6 +78,8 @@ void startPlayback(){
   setGain(gain8);
   int8_t rgMode = EEPROM.read(EEPROM_OFFSET_REPLAYGAIN);
   setReplayGainMode((ReplayGainMode)rgMode);
+  int8_t fbGain8 = EEPROM.read(EEPROM_OFFSET_REPLAYGAIN + 1);
+  setReplayGainFallbackGain(fbGain8);
 #endif
 
   dirNav.openRoot(&sd);
@@ -126,6 +128,8 @@ void savePlayerState(){
   int8_t gain8 = min(max(currentGain, -127), 127);
   EEPROM.write(EEPROM_OFFSET_VOLUME, gain8);
   EEPROM.write(EEPROM_OFFSET_REPLAYGAIN, replayGainMode);
+  int8_t fbGain8 = min(max(rgFallbackGain, -127), 127);
+  EEPROM.write(EEPROM_OFFSET_REPLAYGAIN + 1, fbGain8);
 #endif
 }
 
@@ -327,6 +331,7 @@ void seekRelative(int dtsec) {
 #if USE_F32
 float currentGain = 0;
 ReplayGainMode replayGainMode = REPLAY_GAIN_OFF;
+float rgFallbackGain = 0;
 
 void setGain(float dB) {
   Serial.print("setting gain to ");
@@ -343,6 +348,11 @@ void setGain(float dB) {
 
 void setReplayGainMode(ReplayGainMode rgMode){
   replayGainMode = (ReplayGainMode)(rgMode % REPLAY_GAIN_MODES);
+  setGain(currentGain);
+}
+
+void setReplayGainFallbackGain(float dB){
+  rgFallbackGain = dB;
   setGain(currentGain);
 }
 
@@ -368,7 +378,7 @@ float effectiveReplayGain(){
     peak = playingCodec->replaygainPeak(!preferAlbumGain());
   }
   if(isnan(replayGain)){
-    return 0;
+    return rgFallbackGain;
   }
   
   float peakDb = log10(peak) * 20;

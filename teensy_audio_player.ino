@@ -158,6 +158,12 @@ bool doSerialControl(){
       case '-':
         setGain(currentGain - 1);
         break;
+      case ']':
+        setReplayGainFallbackGain(rgFallbackGain + 1);
+        break;
+      case '[':
+        setReplayGainFallbackGain(rgFallbackGain - 1);
+        break;
 #endif
       default:
         Serial.print("unknown cmd ");

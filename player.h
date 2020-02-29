@@ -60,8 +60,10 @@ enum ReplayGainMode {
 
 extern float currentGain;
 extern ReplayGainMode replayGainMode;
+extern float rgFallbackGain;
 void setGain(float32_t dB);
 void setReplayGainMode(ReplayGainMode rgMode);
+void setReplayGainFallbackGain(float dB);
 bool preferAlbumGain();
 float effectiveReplayGain();
 #endif

@@ -91,5 +91,6 @@ public:
   UiMode update(bool redraw);
 
   int selectedSetting;
+  static const int numSettings = 3;
 };
 #endif

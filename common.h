@@ -13,7 +13,7 @@
 #define EEPROM_OFFSET_DIRSTACK (EEPROM_OFFSET_PLAYTIME + 2)
 // 1 byte
 #define EEPROM_OFFSET_VOLUME   (EEPROM_OFFSET_DIRSTACK + 4)
-// 1 byte
+// 2 bytes
 #define EEPROM_OFFSET_REPLAYGAIN (EEPROM_OFFSET_VOLUME + 1)
 
 static inline void softReset(){
