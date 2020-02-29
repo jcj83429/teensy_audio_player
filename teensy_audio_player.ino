@@ -69,15 +69,7 @@ void testSeek() {
 }
 
 void cycleReplayGain(){
-  if(!useReplayGain){
-    setReplayGainSettings(true, false);
-  }else{
-    if(!preferAlbumGain){
-      setReplayGainSettings(true, true);
-    }else{
-      setReplayGainSettings(false, false);
-    }
-  }
+  setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % REPLAY_GAIN_MODES));
 }
 
 bool doSerialControl(){

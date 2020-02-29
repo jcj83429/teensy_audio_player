@@ -51,10 +51,17 @@ void seekAbsolute(uint32_t timesec);
 void seekRelative(int dtsec);
 
 #if USE_F32
+enum ReplayGainMode {
+  REPLAY_GAIN_OFF,
+  REPLAY_GAIN_TRACK,
+  REPLAY_GAIN_ALBUM,
+  REPLAY_GAIN_MODES,
+};
+
 extern float currentGain;
-extern bool useReplayGain;
-extern bool preferAlbumGain;
+extern ReplayGainMode replayGainMode;
 void setGain(float32_t dB);
-void setReplayGainSettings(bool enable, bool preferAlbum);
+void setReplayGainMode(ReplayGainMode rgMode);
+bool preferAlbumGain();
 float effectiveReplayGain();
 #endif

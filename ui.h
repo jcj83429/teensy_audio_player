@@ -83,6 +83,13 @@ public:
 
 #if USE_F32
 class UiModeVolume : public UiModeBase {
+public:
+  UiModeVolume() {
+    selectedSetting = 0;
+  }
+  ~UiModeVolume() {};
   UiMode update(bool redraw);
+
+  int selectedSetting;
 };
 #endif

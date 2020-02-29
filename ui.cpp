@@ -413,40 +413,87 @@ UiMode UiModeVolume::update(bool redraw) {
   if(keys[KEY_FN1].event == KEY_EV_DOWN){
     return UI_MODE_MAIN;
   }
-  if(keys[KEY_FF].event & KEY_EV_DOWN){
-    float newGain = currentGain + 1;
-    newGain = min(newGain, 0);
-    setGain(newGain);
-    goto keysdone;  
+  if(keys[KEY_NEXT].event & KEY_EV_DOWN){
+    switch(selectedSetting){
+      case 0: {
+        float newGain = currentGain + 1;
+        newGain = min(newGain, 0);
+        setGain(newGain);
+        break;
+      }
+      case 1:
+        setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % 3));
+        break;
+      default:
+        break;
+    }
+    goto keysdone;
   }
-  if(keys[KEY_RWD].event & KEY_EV_DOWN){
-    float newGain = currentGain - 1;
-    newGain = max(newGain, -60);
-    setGain(newGain);
-    goto keysdone;  
+  if(keys[KEY_PREV].event & KEY_EV_DOWN){
+    switch(selectedSetting){
+      case 0: {
+        float newGain = currentGain - 1;
+        newGain = max(newGain, -60);
+        setGain(newGain);
+        break;
+      }
+      case 1:
+        setReplayGainMode((ReplayGainMode)((replayGainMode + 1 + REPLAY_GAIN_MODES) % 3));
+        break;
+      default:
+        break;
+    }
+    goto keysdone;
+  }
+  if(keys[KEY_FF].event == KEY_EV_DOWN){
+    selectedSetting = (selectedSetting + 1) % 2;
+    goto keysdone;
+  }
+  if(keys[KEY_RWD].event == KEY_EV_DOWN){
+    selectedSetting = (selectedSetting - 1 + 2) % 2;
+    goto keysdone;
   }
 keysdone:
 
   memset(framebuffer, 0, sizeof(framebuffer));
-  printStr("Digital Volume", 21, 0, 0, false);
-  int volumeBarLength = currentGain + 60;
-  volumeBarLength = min(max(0, volumeBarLength), 60);
-
-  for(int i = 8; i < volumeBarLength + 8; i++) {
-    framebuffer[2][i] = 0xff;
-  }
-  for(int i = volumeBarLength + 8; i < 60 + 8; i++) {
-    framebuffer[2][i] = 0x81;
-  }
+  printStr("Volume", 21, 0, 0, false);
 
   char strbuf[10] = {0};
   snprintf(strbuf, 10, "%3.2ddB", (int)currentGain);
-  printStr(strbuf, 5, 128-30, 2, false);
+  printStr(strbuf, 5, 128-30, 0, false);
 
-  printStr("ReplayGain", 21, 0, 4, false);
-  printStr("Effective:", 21, 12, 5, false);
+  printStr("ReplayGain", 21, 0, 2, false);
+  switch(replayGainMode){
+    case REPLAY_GAIN_OFF:
+      printStr("Off", 3, 128-18, 2, false);
+      break;
+    case REPLAY_GAIN_TRACK:
+      printStr("Track", 5, 128-30, 2, false);
+      break;
+    case REPLAY_GAIN_ALBUM:
+      printStr("Album", 5, 128-30, 2, false);
+      break;
+    default:
+      break;
+  }
+
+  printStr("Effective RG", 21, 12, 3, false);
   snprintf(strbuf, 10, "%+5.1fdB", effectiveReplayGain());
-  printStr(strbuf, 7, 128 - 42, 5, false);
+  printStr(strbuf, 7, 128 - 42, 3, false);
+
+  int highlightRow;
+  switch(selectedSetting){
+    case 0:
+    default:
+      highlightRow = 0;
+      break;
+    case 1:
+      highlightRow = 2;
+      break;
+  }
+  for(int i = 0; i < 128; i++){
+    framebuffer[highlightRow][i] ^= 0xff;
+  }
 
   return UI_MODE_INVALID;
 }
