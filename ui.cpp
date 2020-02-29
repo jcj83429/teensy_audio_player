@@ -444,7 +444,7 @@ UiMode UiModeVolume::update(bool redraw) {
         break;
       }
       case 1:
-        setReplayGainMode((ReplayGainMode)((replayGainMode + 1 + REPLAY_GAIN_MODES) % 3));
+        setReplayGainMode((ReplayGainMode)((replayGainMode - 1 + REPLAY_GAIN_MODES) % 3));
         break;
       case 2: {
         float newFbGain = rgFallbackGain - 1;
