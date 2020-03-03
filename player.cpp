@@ -225,16 +225,13 @@ void playFile(FsFile *file) {
   int error = 0;
   switch (getFileType(file)) {
     case FileType::MP3:
-      playMp31.load(&myCodecFile);
-      error = playMp31.play();
+      error = playMp31.play(&myCodecFile);
       break;
     case FileType::AAC:
-      playAac1.load(&myCodecFile);
-      error = playAac1.play();
+      error = playAac1.play(&myCodecFile);
       break;
     case FileType::FLAC:
-      playFlac1.load(&myCodecFile);
-      error = playFlac1.play();
+      error = playFlac1.play(&myCodecFile);
       break;
     default:
       Serial.println("WTF attempting to play dir or unsupported file?");
