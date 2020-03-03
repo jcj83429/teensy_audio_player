@@ -232,7 +232,7 @@ void setup() {
   pinMode(PIN_VFD_SS, OUTPUT);
   pinMode(PIN_VFD_CMD_DATA, OUTPUT);
   pinMode(PIN_VFD_RST, OUTPUT);
-  pinMode(PIN_VFD_FRP, INPUT);
+  //pinMode(PIN_VFD_FRP, INPUT);
   digitalWrite(PIN_VFD_RST, LOW);
   delay(1);
   digitalWrite(PIN_VFD_RST, HIGH);
