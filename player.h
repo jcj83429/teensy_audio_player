@@ -1,6 +1,7 @@
 #include <play_sd_mp3.h>
 #include <play_sd_aac.h>
 #include <play_sd_flac.h>
+#include <play_sd_opus.h>
 #include "common.h"
 #include "mycodecfile.h"
 #include "directories.h"

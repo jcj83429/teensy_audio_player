@@ -16,6 +16,7 @@ enum FileType {
   MP3,
   AAC,
   FLAC,
+  OPUS,
 };
 
 char * getCachedFileName(FsFile *dir, uint16_t fileIdx);

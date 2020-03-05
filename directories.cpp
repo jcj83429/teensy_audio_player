@@ -164,6 +164,10 @@ FileType getFileType(FsFile *file) {
     return FileType::FLAC;
   }
 
+  if(strcasecmp("opus", tmpFileName + fnlen - 4) == 0){
+    return FileType::OPUS;
+  }
+
   return FileType::UNSUPPORTED;
 }
 
