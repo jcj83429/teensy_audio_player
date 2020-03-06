@@ -280,6 +280,7 @@ void setup() {
 
 ///// SD CARD
 
+  //while (!sd.begin(SdSpiConfig(SDCARD_SS_PIN, DEDICATED_SPI, SD_SCK_MHZ(50)))) {
   while (!sd.begin(SdioConfig(FIFO_SDIO))) {
     Serial.println("SdFs begin() failed");
     displayError("SdFs begin() failed ", "                    ", 10000);
@@ -306,6 +307,8 @@ void setup() {
 
 void loop() {
   if(sd.sdErrorCode()){
+    Serial.print("SD ERROR CODE ");
+    Serial.println(sd.sdErrorCode());
     displayError("SD CARD ERROR       ", "REBOOTING...        ", 10000);
     delay(2000);
     softReset();

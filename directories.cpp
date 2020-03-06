@@ -4,6 +4,7 @@
 #include "common.h"
 #include "ui.h"
 #include "vfd.h"
+#include "player.h"
 
 char fileNameCache[FILE_NAME_CACHE_SIZE];
 
@@ -20,9 +21,6 @@ int fileNameCacheFirstEntry = 0; // oldest entry index
 
 unsigned long long cacheTime = 0;
 unsigned long long cacheSearchTime = 0;
-
-extern void suspendDecoding();
-extern void resumeDecoding();
 
 char * getCachedFileName(FsFile *dir, uint16_t fileIdx){
   unsigned long long startTime = micros();
@@ -88,6 +86,7 @@ char * getCachedFileName(FsFile *dir, uint16_t fileIdx){
     softReset();
   }
   tmpFile.getName(&fileNameCache[newEntryPos], FILE_NAME_MAX_LEN - 1); // leave 1 byte for "/" in case of dir
+  tmpFile.close();
   resumeDecoding();
   if(tmpFile.isDir()){
     int fnLen = strlen(&fileNameCache[newEntryPos]);
@@ -184,8 +183,13 @@ void DirectoryNavigator::printCurDir() {
   for(int i=0; i<curDirFiles(); i++){
     FsFile tmpFile;
     uint16_t dirFileIdx = sortedFileIdx[dirStackLevel][i];
+    bool isDir;
+    uint32_t fileSize;
     suspendDecoding();
     tmpFile.open(curDir(), dirFileIdx, O_RDONLY);
+    isDir = tmpFile.isDir();
+    fileSize = tmpFile.fileSize();
+    tmpFile.close();
     resumeDecoding();
     if(i == lastSelectedItem){
       Serial.print("*");
@@ -193,12 +197,12 @@ void DirectoryNavigator::printCurDir() {
     Serial.print(i);
     Serial.print("\t");
     Serial.print(getCachedFileName(curDir(), dirFileIdx));
-    if (tmpFile.isDir()) {
+    if (isDir) {
       Serial.println("/");
     } else {
       // files have sizes, directories do not
       Serial.print("\t\t");
-      Serial.println((uint32_t)tmpFile.fileSize(), DEC);
+      Serial.println(fileSize, DEC);
     }
   }
 }
@@ -356,11 +360,13 @@ void DirectoryNavigator::loadCurDir() {
     }
 
     if(getFileType(&tmpFile) == FileType::UNSUPPORTED){
+      tmpFile.close();
       resumeDecoding();
       continue;
     }
     sortedFileIdx[dirStackLevel][nf] = tmpFile.dirIndex();
     nf++;
+    tmpFile.close();
     resumeDecoding();
   }
   if(nf == MAX_DIR_FILES){
