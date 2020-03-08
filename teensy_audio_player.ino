@@ -78,6 +78,7 @@ bool doSerialControl(){
     char c = Serial.read();
     switch (c) {
       case '\n':
+      case '\r':
         break;
       case 'E':
         displayError("TEST ERROR", "TEST ERROR", 10000);
@@ -93,7 +94,7 @@ bool doSerialControl(){
             continue;
           }
           char d = Serial.read();
-          if (d == '\n') {
+          if (d == '\n' || d == '\r') {
             strbuf[i] = 0;
             break;
           } else if (isdigit(d)) {
