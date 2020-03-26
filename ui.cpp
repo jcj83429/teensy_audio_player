@@ -63,7 +63,7 @@ struct KeyInfo keys[] = {
 void updateKeyStates(){
   unsigned long now = millis();
   for(int keyId = 0; keyId < NUM_KEYS; keyId++){
-    bool newState = digitalRead(keys[keyId].pin);
+    bool newState = !digitalRead(keys[keyId].pin);
 
     if(newState != keys[keyId].lastState){
       keys[keyId].lastState = newState;

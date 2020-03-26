@@ -1,12 +1,12 @@
 #include "directories.h"
 #include "common.h"
 
-#define PIN_KEY_PREV 25
-#define PIN_KEY_RWD  26
-#define PIN_KEY_PLAY 27
-#define PIN_KEY_FF   28
-#define PIN_KEY_NEXT 38
-#define PIN_KEY_FN1 37
+#define PIN_KEY_PREV 37
+#define PIN_KEY_RWD  38
+#define PIN_KEY_PLAY 39
+#define PIN_KEY_FF   27
+#define PIN_KEY_NEXT 28
+#define PIN_KEY_FN1 26
 
 enum KeyId {
   KEY_PREV,
