@@ -16,9 +16,13 @@
 // 2 bytes
 #define EEPROM_OFFSET_REPLAYGAIN (EEPROM_OFFSET_VOLUME + 1)
 
+#define SCB_AIRCR (*(volatile uint32_t *)0xE000ED0C) // Application Interrupt and Reset Control location
+
 static inline void softReset(){
   SCB_AIRCR = 0x05FA0004;  //write value for restart
 }
+
+int freeMemory();
 
 extern SdFs sd;
 

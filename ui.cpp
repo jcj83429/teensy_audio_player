@@ -8,7 +8,11 @@
 #define KEY_REPEAT_TIME 100
 #define KEY_REPEAT_DELAY 250
 
-UiModeBase *currentUiMode = new UiModeMain();
+UiModeMain uiModeMain;
+UiModeFiles uiModeFiles;
+UiModeVolume uiModeVolume;
+
+UiModeBase *currentUiMode = &uiModeMain;
 
 uint8_t framebuffer[8][128];
 
@@ -182,23 +186,25 @@ void uiUpdate(){
   if(newMode != UI_MODE_INVALID){
     Serial.print("change UI mode to ");
     Serial.println(newMode);
-    delete currentUiMode;
+
     switch(newMode){
     case UI_MODE_MAIN:
-      currentUiMode = new UiModeMain();
+      currentUiMode = &uiModeMain;
       break;
     case UI_MODE_FILES:
-      currentUiMode = new UiModeFiles();
+      currentUiMode = &uiModeFiles;
       break;
 #if USE_F32
     case UI_MODE_VOLUME:
-      currentUiMode = new UiModeVolume();
+      currentUiMode = &uiModeVolume;
       break;
 #endif
     default:
       break;
-      currentUiMode = new UiModeMain();
+      currentUiMode = &uiModeMain;
     }
+
+    currentUiMode->enter();
   }
 
   if(errorMsgEndTime){
@@ -310,16 +316,13 @@ filenameend:
   return UI_MODE_INVALID;
 }
 
-UiModeFiles::UiModeFiles(){
+void UiModeFiles::enter(){
   // all files are opened read only, so just copy the whole dirNav
   filesModeDirNav = dirNav;
   highlightedIdx = filesModeDirNav.lastSelectedItem;
   highlightedFnOffset = 0;
   lastUpdateTime = millis();
   draw();
-}
-
-UiModeFiles::~UiModeFiles(){
 }
 
 UiMode UiModeFiles::update(bool redraw) {

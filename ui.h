@@ -57,7 +57,7 @@ void clearError();
 
 class UiModeBase {
 public:
-  virtual ~UiModeBase() {};
+  virtual void enter() {};
   // process key events, update framebuffer, and return next UiMode
   virtual UiMode update(bool redraw) = 0;
 };
@@ -69,8 +69,7 @@ public:
 
 class UiModeFiles : public UiModeBase {
 public:
-  UiModeFiles();
-  ~UiModeFiles();
+  void enter();
   UiMode update(bool redraw);
 
   void draw();
@@ -84,10 +83,9 @@ public:
 #if USE_F32
 class UiModeVolume : public UiModeBase {
 public:
-  UiModeVolume() {
+  void enter() {
     selectedSetting = 0;
   }
-  ~UiModeVolume() {};
   UiMode update(bool redraw);
 
   int selectedSetting;

@@ -21,7 +21,11 @@
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 #define LED_PIN 13
 
-#define SCB_AIRCR (*(volatile uint32_t *)0xE000ED0C) // Application Interrupt and Reset Control location
+#define SRAM_U_BASE 0x20000000
+// Allocate unused memory to fill up SRAM_L so the audio decoders only get SRAM_U memory.
+// If the audio decoders get memory crossing the SRAM_L and SRAM_U boundary (0x20000000),
+// they may do unaligned buffer copy across it which causes a hard fault.
+void *unused_malloc_padding;
 
 SdFs sd;
 
@@ -32,6 +36,24 @@ void low_voltage_isr(void){
   delay(1000);
   Serial.end();  //clears the serial monitor  if used
   softReset();
+}
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+ 
+int freeMemory() {
+  char top;
+#ifdef __arm__
+  return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+  return &top - __brkval;
+#else  // __arm__
+  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
 }
 
 void printStatus() {
@@ -56,6 +78,9 @@ void printStatus() {
   Serial.print(" effective replay gain: ");
   Serial.print(effectiveReplayGain());
 #endif
+
+  Serial.print(" free ram: ");
+  Serial.print(freeMemory());
 
   Serial.println();
 }
@@ -299,7 +324,18 @@ void setup() {
   // make sd the current volume.
   sd.chvol();
 
-  // sdEx.ls(LS_R | LS_DATE | LS_SIZE);
+  size_t heapTop = (size_t)sbrk(0);
+  if(heapTop <= SRAM_U_BASE){
+    size_t paddingSize = SRAM_U_BASE - heapTop + 4096;
+    Serial.print("allocating ");
+    Serial.print(paddingSize);
+    Serial.println(" bytes of unused memory to fill up SRAM_L");
+    unused_malloc_padding = malloc(paddingSize);
+    Serial.print("freeMemory: ");
+    Serial.println(freeMemory());
+  }else{
+    Serial.print("SRAM_L is already filled by global and static objects");
+  }
 
   startPlayback();
 
