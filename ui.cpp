@@ -301,14 +301,14 @@ keysdone:
 
   int peakLLog, peakRLog;
   if(peakL == 0){
-    peakLLog = 0;
+    peakLLog = -1;
   }else{
     fu.f = peakL;
     peakLLog = ((fu.u >> 23) & 0xff) - 127;
     peakLLog = min(127, peakLLog);
   }
   if(peakR == 0){
-    peakRLog = 0;
+    peakRLog = -1;
   }else{
     fu.f = peakR;
     peakRLog = ((fu.u >> 23) & 0xff) - 127;
@@ -316,10 +316,39 @@ keysdone:
   }
 
   if(peakLLog >= 0){
-    framebuffer[0][peakLLog] |= 0xe0;
+    framebuffer[0][peakLLog] |= 0x07;
   }
   if(peakRLog >= 0){
-    framebuffer[0][peakRLog] |= 0x07;
+    framebuffer[0][peakRLog] |= 0xe0;
+  }
+
+  // row 0: overlay rms
+  float rmsL = analyzePeak1.readMeanSq() * 4 / 65536; // 0 to 2^16
+  rmsL = rmsL * rmsL;
+  rmsL = rmsL * rmsL;
+  rmsL = rmsL * rmsL;
+  fu.f = rmsL;
+  int rmsLLog = ((fu.u >> 23) & 0xff) - 127;
+  rmsLLog = min(127, rmsLLog);
+  if(rmsLLog >= 0){
+    framebuffer[0][rmsLLog] |= 0x03;
+    if(rmsLLog > 0){
+      framebuffer[0][rmsLLog-1] |= 0x03;
+    }
+  }
+
+  float rmsR = analyzePeak2.readMeanSq() * 4 / 65536; // 0 to 2^16
+  rmsR = rmsR * rmsR;
+  rmsR = rmsR * rmsR;
+  rmsR = rmsR * rmsR;
+  fu.f = rmsR;
+  int rmsRLog = ((fu.u >> 23) & 0xff) - 127;
+  rmsRLog = min(127, rmsRLog);
+  if(rmsRLog >= 0){
+    framebuffer[0][rmsRLog] |= 0xc0;
+    if(rmsRLog > 0){
+      framebuffer[0][rmsRLog-1] |= 0xc0;
+    }
   }
 
   // clear row 4-7
