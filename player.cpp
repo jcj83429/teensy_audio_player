@@ -27,6 +27,11 @@ AudioConnection          patchCord8(playOpus1, 1, mixer2, 3);
 //AudioConnection          patchCord8(sine1, 0, mixer2, 3);
 // GUItool: end automatically generated code 
 
+AudioPeakHold         analyzePeak1;
+AudioPeakHold         analyzePeak2;
+AudioConnection          patchCord101(mixer1, analyzePeak1);
+AudioConnection          patchCord102(mixer2, analyzePeak2);
+
 #if !USE_F32
 
 // 16 bit out
@@ -66,7 +71,6 @@ AudioConnection_F32      patchCordf06(i16tof32r, 0, mixer3, 3);
 AudioConnection_F32      patchCordf07(mixer3, 0, fft256, 0);
 
 #endif
-
 
 FsFile currentFile;
 char currentFileName[256] = {0};

@@ -255,6 +255,11 @@ UiMode UiModeMain::update(bool redraw){
   }
 keysdone:
 
+  union {
+    float32_t f;
+    uint32_t u;
+  } fu;
+
   // row 0-3: spectrum
   for (int i = 0 ; i < 128; i++) {
 #if !USE_F32
@@ -267,10 +272,6 @@ keysdone:
     }
     fftBinLog = (fftBinLog << 1) | lsb;
 #else
-    union {
-      float32_t f;
-      uint32_t u;
-    } fu;
     float32_t fftBin = fft256.output[i];
     fu.f = fftBin * fftBin; // 2 * log(x) = log(x^2);
     int fftBinLog = (fu.u >> 23) & 0xff; // just get exponent
@@ -282,6 +283,43 @@ keysdone:
     framebuffer[1][i] = fftBinLogMask >> 8;
     framebuffer[2][i] = fftBinLogMask >> 16;
     framebuffer[3][i] = fftBinLogMask >> 24;
+  }
+
+  // row 0: overlay peak
+  float peakL = (analyzePeak1.read() * 2) & 0xffff; //0 to 2^16
+  peakL /= 256; // limit peak meter to 8 bits of dynamic range. below that it's mostly noise and DC offset anyway.
+  peakL = peakL * peakL;
+  peakL = peakL * peakL;
+  peakL = peakL * peakL;
+  peakL = peakL * peakL; // 0 to 2^128
+  float peakR = (analyzePeak2.read() * 2) & 0xffff; //0 to 2^16
+  peakR /= 256;
+  peakR = peakR * peakR;
+  peakR = peakR * peakR;
+  peakR = peakR * peakR;
+  peakR = peakR * peakR; // 0 to 2^128
+
+  int peakLLog, peakRLog;
+  if(peakL == 0){
+    peakLLog = 0;
+  }else{
+    fu.f = peakL;
+    peakLLog = ((fu.u >> 23) & 0xff) - 127;
+    peakLLog = min(127, peakLLog);
+  }
+  if(peakR == 0){
+    peakRLog = 0;
+  }else{
+    fu.f = peakR;
+    peakRLog = ((fu.u >> 23) & 0xff) - 127;
+    peakRLog = min(127, peakRLog);
+  }
+
+  if(peakLLog >= 0){
+    framebuffer[0][peakLLog] |= 0xe0;
+  }
+  if(peakRLog >= 0){
+    framebuffer[0][peakRLog] |= 0x07;
   }
 
   // clear row 4-7

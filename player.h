@@ -7,6 +7,7 @@
 #include "directories.h"
 #include "analyze_fft256_f32.h"
 #include <AudioMixer_F32.h>
+#include "peakmeter.h"
 
 extern AudioPlaySdMp3           playMp31;     //xy=100.25,89.25
 extern AudioPlaySdAac           playAac1;     //xy=110.25,130.25
@@ -19,6 +20,9 @@ extern AudioAnalyzeFFT256       fft256;
 extern AudioMixer4_F32          mixer3;
 extern AudioAnalyzeFFT256_F32   fft256;
 #endif
+
+extern AudioPeakHold analyzePeak1;
+extern AudioPeakHold analyzePeak2;
 
 #if !USE_F32
 

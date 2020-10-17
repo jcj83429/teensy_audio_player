@@ -325,12 +325,17 @@ void setup() {
   sd.chvol();
 
   size_t heapTop = (size_t)sbrk(0);
+  Serial.print("heapTop at ");
+  Serial.println(heapTop, HEX);
   if(heapTop <= SRAM_U_BASE){
-    size_t paddingSize = SRAM_U_BASE - heapTop + 4096;
+    size_t paddingSize = SRAM_U_BASE - heapTop + 8192;
     Serial.print("allocating ");
     Serial.print(paddingSize);
     Serial.println(" bytes of unused memory to fill up SRAM_L");
     unused_malloc_padding = malloc(paddingSize);
+    heapTop = (size_t)sbrk(0);
+    Serial.print("heapTop now at ");
+    Serial.println(heapTop, HEX);
     Serial.print("freeMemory: ");
     Serial.println(freeMemory());
   }else{
