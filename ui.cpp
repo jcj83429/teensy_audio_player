@@ -316,10 +316,10 @@ keysdone:
   }
 
   if(peakLLog >= 0){
-    framebuffer[0][peakLLog] |= 0x07;
+    framebuffer[0][peakLLog] |= 0x01;
   }
   if(peakRLog >= 0){
-    framebuffer[0][peakRLog] |= 0xe0;
+    framebuffer[0][peakRLog] |= 0x80;
   }
 
   // row 0: overlay rms
@@ -331,9 +331,9 @@ keysdone:
   int rmsLLog = ((fu.u >> 23) & 0xff) - 127;
   rmsLLog = min(127, rmsLLog);
   if(rmsLLog >= 0){
-    framebuffer[0][rmsLLog] |= 0x03;
+    framebuffer[0][rmsLLog] |= 0x06;
     if(rmsLLog > 0){
-      framebuffer[0][rmsLLog-1] |= 0x03;
+      framebuffer[0][rmsLLog-1] |= 0x06;
     }
   }
 
@@ -345,9 +345,9 @@ keysdone:
   int rmsRLog = ((fu.u >> 23) & 0xff) - 127;
   rmsRLog = min(127, rmsRLog);
   if(rmsRLog >= 0){
-    framebuffer[0][rmsRLog] |= 0xc0;
+    framebuffer[0][rmsRLog] |= 0x60;
     if(rmsRLog > 0){
-      framebuffer[0][rmsRLog-1] |= 0xc0;
+      framebuffer[0][rmsRLog-1] |= 0x60;
     }
   }
 
