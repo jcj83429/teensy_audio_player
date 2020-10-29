@@ -1,13 +1,13 @@
 #ifndef PEAKMETER_H
 #define PEAKMETER
 
-// Peak detector that returns the highest peak in the last 8 blocks (about 0.025s)
+// Peak detector that returns the highest peak in the last 6 blocks (about 0.05s)
 // based on AudioAnalyzePeak
 
 #include "Arduino.h"
 #include "AudioStream.h"
 
-#define PEAK_HOLD_BLOCKS 8
+#define PEAK_HOLD_BLOCKS 16
 
 class AudioPeakHold : public AudioStream
 {
