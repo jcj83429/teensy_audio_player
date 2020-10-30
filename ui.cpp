@@ -492,7 +492,7 @@ UiMode UiModeVolume::update(bool redraw) {
         break;
       }
       case 1:
-        setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % 3));
+        setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % REPLAY_GAIN_MODES));
         break;
       case 2: {
         float newFbGain = rgFallbackGain + 1;
@@ -514,7 +514,7 @@ UiMode UiModeVolume::update(bool redraw) {
         break;
       }
       case 1:
-        setReplayGainMode((ReplayGainMode)((replayGainMode - 1 + REPLAY_GAIN_MODES) % 3));
+        setReplayGainMode((ReplayGainMode)((replayGainMode - 1 + REPLAY_GAIN_MODES) % REPLAY_GAIN_MODES));
         break;
       case 2: {
         float newFbGain = rgFallbackGain - 1;
@@ -554,6 +554,9 @@ keysdone:
       break;
     case REPLAY_GAIN_ALBUM:
       printStr("Album", 5, 128-30, 2, false);
+      break;
+    case REPLAY_GAIN_AVERAGE:
+      printStr("Average", 7, 128-42, 2, false);
       break;
     default:
       break;

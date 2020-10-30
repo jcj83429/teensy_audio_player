@@ -268,10 +268,14 @@ void playFile(FsFile *file) {
     }
 
 #if USE_F32
-    Serial.print("RG peak: ");
-    Serial.println(playingCodec->replaygainPeak(preferAlbumGain()));
-    Serial.print("RG gain: ");
-    Serial.println(playingCodec->replaygainGainDb(preferAlbumGain()));
+    Serial.print("RG track peak: ");
+    Serial.println(playingCodec->replaygainPeak(false));
+    Serial.print("RG track gain: ");
+    Serial.println(playingCodec->replaygainGainDb(false));
+    Serial.print("RG album peak: ");
+    Serial.println(playingCodec->replaygainPeak(true));
+    Serial.print("RG album gain: ");
+    Serial.println(playingCodec->replaygainGainDb(true));
     setGain(currentGain); // apply new replaygain
 #endif
   }else{
@@ -365,10 +369,6 @@ void setReplayGainFallbackGain(float dB){
   setGain(currentGain);
 }
 
-bool preferAlbumGain() { 
-  return replayGainMode == REPLAY_GAIN_ALBUM;
-}
-
 float effectiveReplayGain(){
   if(replayGainMode == REPLAY_GAIN_OFF){
     return 0;
@@ -379,13 +379,38 @@ float effectiveReplayGain(){
     return 0;
   }
 
-  float replayGain = playingCodec->replaygainGainDb(preferAlbumGain());
-  float peak = playingCodec->replaygainPeak(preferAlbumGain());
-  if(isnan(replayGain)){
-    // try the other one
-    replayGain = playingCodec->replaygainGainDb(!preferAlbumGain());
-    peak = playingCodec->replaygainPeak(!preferAlbumGain());
+  float replayGain = NAN;
+  float peak = 1;
+  
+  if(replayGainMode == REPLAY_GAIN_TRACK || replayGainMode == REPLAY_GAIN_ALBUM){
+    bool preferAlbumGain = replayGainMode == REPLAY_GAIN_ALBUM;
+    replayGain = playingCodec->replaygainGainDb(preferAlbumGain);
+    peak = playingCodec->replaygainPeak(preferAlbumGain);
+    if(isnan(replayGain)){
+      // try the other one
+      replayGain = playingCodec->replaygainGainDb(!preferAlbumGain);
+      peak = playingCodec->replaygainPeak(!preferAlbumGain);
+    }
+  }else{
+    // REPLAY_GAIN_AVERAGE
+    float rgAlbum = playingCodec->replaygainGainDb(true);
+    float rgTrack = playingCodec->replaygainGainDb(false);
+    float peakAlbum = playingCodec->replaygainPeak(true);
+    float peakTrack = playingCodec->replaygainPeak(false);
+    if(!isnan(rgAlbum) && !isnan(rgTrack)){
+      // for the gain, use the average
+      replayGain = (rgAlbum + rgTrack)/2;
+      // the album peak should alwayw be >= the track peak
+      peak = (peakAlbum + peakTrack)/2;
+    }else if(!isnan(rgAlbum)){
+      replayGain = rgAlbum;
+      peak = peakAlbum;
+    }else if(!isnan(rgTrack)){
+      replayGain = rgTrack;
+      peak = peakTrack;
+    }
   }
+  
   if(isnan(replayGain)){
     return rgFallbackGain;
   }
