@@ -1,3 +1,5 @@
+// code for Noritake GU128x64-800B VFD
+
 #include <stdint.h>
 // teensy 3.6
 // SS and CMD/DATA are controlled by HW SPI CS
