@@ -21,11 +21,13 @@
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 #define LED_PIN 13
 
+#if defined(KINETISK) // Teensy 3.6
 #define SRAM_U_BASE 0x20000000
 // Allocate unused memory to fill up SRAM_L so the audio decoders only get SRAM_U memory.
 // If the audio decoders get memory crossing the SRAM_L and SRAM_U boundary (0x20000000),
 // they may do unaligned buffer copy across it which causes a hard fault.
 void *unused_malloc_padding;
+#endif
 
 SdFs sd;
 
@@ -203,14 +205,18 @@ bool doSerialControl(){
 
 void setup() {
   delay(100);
+  Serial.begin(115200);
+  //while(!Serial);
+
+#if defined(KINETISK) // Teensy 3.6
   // clear low voltage detection
   PMC_LVDSC2 |= PMC_LVDSC2_LVWACK;
   // choose high detect threshold, enable LV interrupt
   PMC_LVDSC2 = PMC_LVDSC2_LVWV(3) | PMC_LVDSC2_LVWIE;
   NVIC_ENABLE_IRQ(IRQ_LOW_VOLTAGE);
-
-  Serial.begin(115200);
-  //while(!Serial);
+#else
+  Serial.println("low voltage detection (play position save) not implemented");
+#endif
 
   pinMode(LED_PIN, OUTPUT);
 
@@ -270,6 +276,7 @@ void setup() {
   SPI.beginTransaction(SPISettings(2500000, MSBFIRST, SPI_MODE3));
   SPI.endTransaction();
 
+#if defined(KINETISK) // Teensy 3.6
   DUMPVAL(SPI0_CTAR0);
   DUMPVAL(SPI0_PUSHR);
   SPI0_CTAR0 &= ~(SPI_CTAR_ASC(0xf));
@@ -293,6 +300,7 @@ void setup() {
   DUMPVAL(CORE_PIN6_CONFIG);
   CORE_PIN6_CONFIG = PORT_PCR_MUX(2) | PORT_PCR_SRE; // pin 6 = PTD4 = SPI0_PCS1
   DUMPVAL(CORE_PIN6_CONFIG);
+#endif
 #endif
 
   vfdInit();
@@ -324,6 +332,7 @@ void setup() {
   // make sd the current volume.
   sd.chvol();
 
+#if defined(KINETISK) // Teensy 3.6
   size_t heapTop = (size_t)sbrk(0);
   Serial.print("heapTop at ");
   Serial.println(heapTop, HEX);
@@ -341,6 +350,7 @@ void setup() {
   }else{
     Serial.print("SRAM_L is already filled by global and static objects");
   }
+#endif
 
   startPlayback();
 

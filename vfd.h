@@ -8,8 +8,14 @@
 #define PIN_VFD_RST 14
 #define PIN_VFD_FRP 38
 
+#if defined(KINETISK) // Teensy 3.6
 #define USE_HW_CS 1
 #define USE_SPI_DMA 1
+#else
+// HW CS is not supported on T4.1. The SPI hardware can't toggle multiple CS pins at once
+#define USE_HW_CS 0
+#define USE_SPI_DMA 0
+#endif 
 
 #define DUMPVAL(x) do{ Serial.print(#x); Serial.print(": "); Serial.println(x, HEX); }while(0);
 
