@@ -123,13 +123,10 @@ void printStatus() {
   Serial.print("/");
   Serial.print(myCodecFile.fsize());
 
-  AudioCodec *playingCodec = getPlayingCodec();
-  if (playingCodec) {
-    Serial.print(" time: ");
-    Serial.print(playingCodec->positionMillis());
-    Serial.print("/");
-    Serial.print(playingCodec->lengthMillis());
-  }
+  Serial.print(" time: ");
+  Serial.print(positionMs());
+  Serial.print("/");
+  Serial.print(lengthMs());
 
 #if USE_F32
   Serial.print(" effective replay gain: ");

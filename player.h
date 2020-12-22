@@ -60,6 +60,8 @@ bool playNext();
 bool playPrev();
 bool isPlaying();
 void togglePause();
+uint32_t lengthMs();
+uint32_t positionMs();
 void seekAbsolute(uint32_t timesec);
 void seekRelative(int dtsec);
 

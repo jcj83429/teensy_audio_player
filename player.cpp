@@ -371,6 +371,24 @@ void togglePause() {
   }
 }
 
+uint32_t lengthMs() {
+  AudioCodec *playingCodec = getPlayingCodec();
+  if (playingCodec) {
+    return playingCodec->lengthMillis();
+  } else if (playModule1.isPlaying()) {
+    return playModule1.lengthMs();
+  }
+}
+
+uint32_t positionMs() {
+  AudioCodec *playingCodec = getPlayingCodec();
+  if (playingCodec) {
+    return playingCodec->positionMillis();
+  } else if (playModule1.isPlaying()) {
+    return playModule1.positionMs();
+  }
+}
+
 void seekAbsolute(uint32_t timesec) {
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
@@ -384,6 +402,17 @@ void seekAbsolute(uint32_t timesec) {
     Serial.println(result);
     Serial.print("positionMillis: ");
     Serial.println(playingCodec->positionMillis());
+  } else if (playModule1.isPlaying()) {
+    if (timesec > playModule1.lengthMs() / 1000) {
+      return;
+    }
+    Serial.print("seeking to ");
+    Serial.println(timesec);
+    bool result = playModule1.seekSec(timesec);
+    Serial.print("result: ");
+    Serial.println(result);
+    Serial.print("positionMs: ");
+    Serial.println(playModule1.positionMs());
   }
 }
 
@@ -395,6 +424,13 @@ void seekRelative(int dtsec) {
       timesec = 0;
     }
     seekAbsolute(timesec);
+  } else if (playModule1.isPlaying()) {
+    // module seeking is not accurate. just seek to next/prev pattern
+    if (dtsec > 0) {
+      playModule1.seekNextPos();
+    } else if (dtsec < 0) {
+      playModule1.seekPrevPos();
+    }
   }
 }
 
