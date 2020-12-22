@@ -167,6 +167,13 @@ FileType getFileType(FsFile *file) {
     return FileType::OPUS;
   }
 
+  if(strcasecmp("mod", tmpFileName + fnlen - 3) == 0 ||
+     strcasecmp("s3m", tmpFileName + fnlen - 3) == 0 ||
+     strcasecmp("xm", tmpFileName + fnlen - 2) == 0 ||
+     strcasecmp("it", tmpFileName + fnlen - 2) == 0){
+    return FileType::MODULE;
+  }
+
   return FileType::UNSUPPORTED;
 }
 

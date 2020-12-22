@@ -2,6 +2,7 @@
 #include <play_sd_aac.h>
 #include <play_sd_flac.h>
 #include <play_sd_opus.h>
+#include <teensy_xmp.h>
 #include "common.h"
 #include "mycodecfile.h"
 #include "directories.h"
@@ -12,6 +13,12 @@
 extern AudioPlaySdMp3           playMp31;     //xy=100.25,89.25
 extern AudioPlaySdAac           playAac1;     //xy=110.25,130.25
 extern AudioPlaySdFlac          playFlac1;     //xy=119.25,173.25
+extern AudioPlaySdOpus          playOpus1;
+
+#if defined(__IMXRT1062__)
+extern TeensyXmp                playModule1;
+#endif
+
 extern AudioSynthWaveformSine   sine1;          //xy=150.25,217.25
 #if !USE_F32
 extern AudioMixer4              mixer3;
@@ -51,6 +58,7 @@ void stop();
 void playFile(FsFile *file);
 bool playNext();
 bool playPrev();
+bool isPlaying();
 void togglePause();
 void seekAbsolute(uint32_t timesec);
 void seekRelative(int dtsec);

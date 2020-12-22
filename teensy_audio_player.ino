@@ -40,14 +40,59 @@ void low_voltage_isr(void){
   softReset();
 }
 
+#if defined(KINETISK) // Teensy 3.6
+
 #ifdef __arm__
 // should use uinstd.h to define sbrk but Due causes a conflict
 extern "C" char* sbrk(int incr);
 #else  // __ARM__
 extern char *__brkval;
 #endif  // __arm__
- 
+
+#else // Teensy 4.x
+
+// from https://github.com/FrankBoesing/T4_PowerButton/blob/master/T4_PowerButton.cpp
+#if defined(ARDUINO_TEENSY40)
+  static const unsigned DTCM_START = 0x20000000UL;
+  static const unsigned OCRAM_START = 0x20200000UL;
+  static const unsigned OCRAM_SIZE = 512;
+  static const unsigned FLASH_SIZE = 1984;
+#elif defined(ARDUINO_TEENSY41)
+  static const unsigned DTCM_START = 0x20000000UL;
+  static const unsigned OCRAM_START = 0x20200000UL;
+  static const unsigned OCRAM_SIZE = 512;
+  static const unsigned FLASH_SIZE = 7936;
+#if TEENSYDUINO>151  
+  extern "C" uint8_t external_psram_size; 
+#endif  
+#endif
+
+unsigned memfree(void) {
+  extern unsigned long _ebss;
+  extern unsigned long _sdata;
+  extern unsigned long _estack;
+  const unsigned DTCM_START = 0x20000000UL;
+  unsigned dtcm = (unsigned)&_estack - DTCM_START;
+  unsigned stackinuse = (unsigned) &_estack -  (unsigned) __builtin_frame_address(0);
+  unsigned varsinuse = (unsigned)&_ebss - (unsigned)&_sdata;
+  unsigned freemem = dtcm - (stackinuse + varsinuse);
+  return freemem;
+}
+
+unsigned heapfree(void) {
+// https://forum.pjrc.com/threads/33443-How-to-display-free-ram?p=99128&viewfull=1#post99128
+  void* hTop = malloc(1024);// current position of heap.
+  unsigned heapTop = (unsigned) hTop;
+  free(hTop);
+  unsigned freeheap = (OCRAM_START + (OCRAM_SIZE * 1024)) - heapTop;
+  return freeheap;
+}
+
+#endif
+
 int freeMemory() {
+#if defined(KINETISK)
+
   char top;
 #ifdef __arm__
   return &top - reinterpret_cast<char*>(sbrk(0));
@@ -56,6 +101,12 @@ int freeMemory() {
 #else  // __arm__
   return __brkval ? &top - __brkval : &top - __malloc_heap_start;
 #endif  // __arm__
+
+#else
+
+  return heapfree();
+
+#endif
 }
 
 void printStatus() {
@@ -63,6 +114,10 @@ void printStatus() {
   Serial.print(playMp31.isPlaying());
   Serial.print(playAac1.isPlaying());
   Serial.print(playFlac1.isPlaying());
+  Serial.print(playOpus1.isPlaying());
+#if defined(__IMXRT1062__)
+  Serial.print(playModule1.isPlaying());
+#endif
   Serial.print(", pos: ");
   Serial.print(myCodecFile.fposition());
   Serial.print("/");
@@ -370,7 +425,7 @@ void loop() {
     return;
   }
 
-  if (dirNav.curDirFiles() && !getPlayingCodec()) {
+  if (dirNav.curDirFiles() && !isPlaying()) {
     playNext();
   }
 

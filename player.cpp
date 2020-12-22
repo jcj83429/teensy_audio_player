@@ -1,5 +1,6 @@
 #include "player.h"
 #include "ui.h"
+#include "myxmpcallbacks.h"
 #include <EEPROM.h>
 #include <AudioStream_F32.h>
 #include <AudioConvert_F32.h>
@@ -15,16 +16,28 @@ AudioPlaySdOpus          playOpus1;
 //AudioSynthWaveformSine   sine1;          //xy=150.25,217.25
 AudioMixer4              mixer1;         //xy=371.25,109.25
 AudioMixer4              mixer2;         //xy=371.25,221.25
+AudioMixer4              mixer4;
+AudioMixer4              mixer5;
 AudioConnection          patchCord1(playMp31, 0, mixer1, 0);
 AudioConnection          patchCord2(playMp31, 1, mixer2, 0);
 AudioConnection          patchCord3(playAac1, 0, mixer1, 1);
 AudioConnection          patchCord4(playAac1, 1, mixer2, 1);
 AudioConnection          patchCord5(playFlac1, 0, mixer1, 2);
 AudioConnection          patchCord6(playFlac1, 1, mixer2, 2);
-AudioConnection          patchCord7(playOpus1, 0, mixer1, 3);
-AudioConnection          patchCord8(playOpus1, 1, mixer2, 3);
-//AudioConnection          patchCord7(sine1, 0, mixer1, 3);
-//AudioConnection          patchCord8(sine1, 0, mixer2, 3);
+AudioConnection          patchCord7(playOpus1, 0, mixer4, 0);
+AudioConnection          patchCord8(playOpus1, 1, mixer5, 0);
+AudioConnection          patchCord11(mixer4, 0, mixer1, 3);
+AudioConnection          patchCord12(mixer5, 0, mixer2, 3);
+
+#if defined(__IMXRT1062__)
+// Only T4.1 has enough memory for modules
+TeensyXmp                playModule1;
+AudioConnection          patchCord9(playModule1, 0, mixer4, 0);
+AudioConnection          patchCord10(playModule1, 1, mixer5, 0);
+#endif
+
+//AudioConnection          patchCord7(sine1, 0, mixer4, 3);
+//AudioConnection          patchCord8(sine1, 0, mixer5, 3);
 // GUItool: end automatically generated code 
 
 AudioPeakHold         analyzePeak1;
@@ -75,6 +88,16 @@ AudioConnection_F32      patchCordf07(mixer3, 0, fft256, 0);
 FsFile currentFile;
 char currentFileName[256] = {0};
 MyCodecFile myCodecFile(NULL);
+
+struct xmp_io_callbacks myXmpIoCb = {
+  .read = my_xmp_read,
+  .seek = my_xmp_seek,
+  .tell = my_xmp_tell,
+  .eof = my_xmp_eof,
+  .size = my_xmp_size,
+  .user_data = NULL,
+};
+
 bool isPaused = false;
 
 DirectoryNavigator dirNav;
@@ -151,6 +174,9 @@ void suspendDecoding() {
   if (playFlac1.isPlaying()) {
     playFlac1.suspendDecoding();
   }
+  // There is no need to suspend decoding for modules. 
+  // libxmp loads the whole module into memory and plays from there 
+  // so it doesn't conflict with sd card access
 }
 
 void resumeDecoding() {
@@ -220,6 +246,11 @@ void stop() {
   if (playingCodec) {
     playingCodec->stop();
   }
+#if defined(__IMXRT1062__)
+  if (playModule1.isPlaying()) {
+    playModule1.stop();
+  }
+#endif
 }
 
 void playFile(FsFile *file) {
@@ -245,6 +276,12 @@ void playFile(FsFile *file) {
     case FileType::OPUS:
       error = playOpus1.play(&myCodecFile);
       break;
+#if defined(__IMXRT1062__)
+    case FileType::MODULE:
+      myXmpIoCb.user_data = file;
+      error = !playModule1.playModuleWithCallbacks(&myXmpIoCb);
+      break;
+#endif
     default:
       Serial.println("WTF attempting to play dir or unsupported file?");
       break;
@@ -256,26 +293,29 @@ void playFile(FsFile *file) {
 
   if(!error){
     AudioCodec *playingCodec = getPlayingCodec();
-    
-    uint32_t sr = playingCodec->sampleRate();
-    if(sr > DAC_MAX_SAMPLE_RATE){
-      char srStr[21];
-      snprintf(srStr, 21, "%-20lu", sr);
-      displayError("UNSUP. SAMPLE RATE: ", srStr, 3000);
-      stop();
+    if(playingCodec){
+      uint32_t sr = playingCodec->sampleRate();
+      if(sr > DAC_MAX_SAMPLE_RATE){
+        char srStr[21];
+        snprintf(srStr, 21, "%-20lu", sr);
+        displayError("UNSUP. SAMPLE RATE: ", srStr, 3000);
+        stop();
+      }else{
+        setSampleRate(sr);
+      }
+      Serial.print("RG track peak: ");
+      Serial.println(playingCodec->replaygainPeak(false));
+      Serial.print("RG track gain: ");
+      Serial.println(playingCodec->replaygainGainDb(false));
+      Serial.print("RG album peak: ");
+      Serial.println(playingCodec->replaygainPeak(true));
+      Serial.print("RG album gain: ");
+      Serial.println(playingCodec->replaygainGainDb(true));
     }else{
-      setSampleRate(sr);
+      // XMP
+      setSampleRate(44100);
     }
-
 #if USE_F32
-    Serial.print("RG track peak: ");
-    Serial.println(playingCodec->replaygainPeak(false));
-    Serial.print("RG track gain: ");
-    Serial.println(playingCodec->replaygainGainDb(false));
-    Serial.print("RG album peak: ");
-    Serial.println(playingCodec->replaygainPeak(true));
-    Serial.print("RG album gain: ");
-    Serial.println(playingCodec->replaygainGainDb(true));
     setGain(currentGain); // apply new replaygain
 #endif
   }else{
@@ -306,11 +346,28 @@ bool playPrev() {
   
 }
 
+bool isPlaying() {
+  if (getPlayingCodec()) {
+    return true;
+  }
+#if defined(__IMXRT1062__)
+  if (playModule1.isPlaying()) {
+    return true;
+  }
+#endif
+  return false;
+}
+
 void togglePause() {
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
     isPaused = !isPaused;
     playingCodec->pause(isPaused);
+#if defined(__IMXRT1062__)
+  } else if(playModule1.isPlaying()) {
+    isPaused = !isPaused;
+    playModule1.pause(isPaused);
+#endif
   }
 }
 
