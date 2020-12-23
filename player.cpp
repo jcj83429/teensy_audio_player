@@ -378,6 +378,7 @@ uint32_t lengthMs() {
   } else if (playModule1.isPlaying()) {
     return playModule1.lengthMs();
   }
+  return 0;
 }
 
 uint32_t positionMs() {
@@ -387,6 +388,7 @@ uint32_t positionMs() {
   } else if (playModule1.isPlaying()) {
     return playModule1.positionMs();
   }
+  return 0;
 }
 
 void seekAbsolute(uint32_t timesec) {
@@ -403,7 +405,7 @@ void seekAbsolute(uint32_t timesec) {
     Serial.print("positionMillis: ");
     Serial.println(playingCodec->positionMillis());
   } else if (playModule1.isPlaying()) {
-    if (timesec > playModule1.lengthMs() / 1000) {
+    if (timesec > (uint32_t)playModule1.lengthMs() / 1000) {
       return;
     }
     Serial.print("seeking to ");

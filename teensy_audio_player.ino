@@ -151,6 +151,13 @@ void cycleReplayGain(){
   setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % REPLAY_GAIN_MODES));
 }
 
+void testSampleRate(){
+  static int srIdx = 0;
+  const int sampleRates[] = {44100, 88200, 22050, 48000, 96000, 24000};
+  srIdx = (srIdx + 1) % 6;
+  setSampleRate(sampleRates[srIdx]);
+}
+
 bool doSerialControl(){
   char strbuf[4] = {0};
   if (Serial.available()) {
@@ -158,6 +165,9 @@ bool doSerialControl(){
     switch (c) {
       case '\n':
       case '\r':
+        break;
+      case 'A':
+        testSampleRate();
         break;
       case 'E':
         displayError("TEST ERROR", "TEST ERROR", 10000);
