@@ -142,11 +142,7 @@ void startPlayback(){
 }
 
 void savePlayerState(){
-  uint16_t playPosSec = 0;
-  AudioCodec *playingCodec = getPlayingCodec();
-  if(playingCodec){
-    playPosSec = playingCodec->positionMillis() / 1000;
-  }
+  uint16_t playPosSec = positionMs() / 1000;
   for(unsigned int i = 0; i < sizeof(playPosSec); i++){
     EEPROM.write(EEPROM_OFFSET_PLAYTIME + i, playPosSec & 0xff);
     playPosSec >>= 8;

@@ -7,6 +7,10 @@
 #define USE_I2S_SLAVE 0
 #define DAC_MAX_SAMPLE_RATE 192000
 
+// Needed for T4.1 only
+// VIN -- 100K ohm -- A8 -- 100K ohm -- GND
+#define VOLTAGE_DIVIDER_PIN A8
+
 // 2 bytes
 #define EEPROM_OFFSET_PLAYTIME 0
 // 4 bytes

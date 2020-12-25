@@ -12,6 +12,10 @@
 #include <AudioStream_F32.h>
 #include <EEPROM.h>
 
+#if defined(__IMXRT1062__)
+#include <ADC.h>
+#endif
+
 // I2S wiring
 // LRCLK = 23
 // DOUT = 22
@@ -39,6 +43,17 @@ void low_voltage_isr(void){
   Serial.end();  //clears the serial monitor  if used
   softReset();
 }
+
+#if defined(__IMXRT1062__)
+// T4.1 has a much narrower range of operating voltage. At 2.9V, the MKL20's brownout
+// detection will trigger and the MKL20 will reset the main processor. The highest
+// brownout detect threshold available in the T4.1 is about 2.95V, which is too close
+// to 2.9V. 
+// Low voltage detection on T4.1 is implemented by using a 1:1 voltage divider to read
+// the VIN voltage so the main processor can see the voltage drop before it starts to
+// affect the 3.3V.
+ADC *adc = new ADC();
+#endif
 
 #if defined(KINETISK) // Teensy 3.6
 
@@ -274,16 +289,6 @@ void setup() {
   Serial.begin(115200);
   //while(!Serial);
 
-#if defined(KINETISK) // Teensy 3.6
-  // clear low voltage detection
-  PMC_LVDSC2 |= PMC_LVDSC2_LVWACK;
-  // choose high detect threshold, enable LV interrupt
-  PMC_LVDSC2 = PMC_LVDSC2_LVWV(3) | PMC_LVDSC2_LVWIE;
-  NVIC_ENABLE_IRQ(IRQ_LOW_VOLTAGE);
-#else
-  Serial.println("low voltage detection (play position save) not implemented");
-#endif
-
   pinMode(LED_PIN, OUTPUT);
 
   pinMode(PIN_KEY_RWD, INPUT_PULLDOWN);
@@ -421,6 +426,21 @@ void setup() {
   startPlayback();
 
   initKeyStates();
+
+#if defined(KINETISK) // Teensy 3.6
+  // clear low voltage detection
+  PMC_LVDSC2 |= PMC_LVDSC2_LVWACK;
+  // choose high detect threshold, enable LV interrupt
+  PMC_LVDSC2 = PMC_LVDSC2_LVWV(3) | PMC_LVDSC2_LVWIE;
+  NVIC_ENABLE_IRQ(IRQ_LOW_VOLTAGE);
+#else
+  pinMode(VOLTAGE_DIVIDER_PIN, INPUT);
+  // trigger low_voltage_isr when VIN falls below 3.7V
+  adc->adc0->enableCompare((3.7/2) / 3.3 * adc->adc0->getMaxValue(), false);
+  adc->adc0->enableInterrupts(low_voltage_isr);
+  adc->adc0->startContinuous(VOLTAGE_DIVIDER_PIN);
+#endif
+
 }
 
 void loop() {
