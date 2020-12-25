@@ -10,7 +10,9 @@
 
 UiModeMain uiModeMain;
 UiModeFiles uiModeFiles;
+#if USE_F32
 UiModeVolume uiModeVolume;
+#endif
 
 UiModeBase *currentUiMode = &uiModeMain;
 

@@ -26,14 +26,14 @@ AudioConnection          patchCord5(playFlac1, 0, mixer1, 2);
 AudioConnection          patchCord6(playFlac1, 1, mixer2, 2);
 AudioConnection          patchCord7(playOpus1, 0, mixer4, 0);
 AudioConnection          patchCord8(playOpus1, 1, mixer5, 0);
-AudioConnection          patchCord11(mixer4, 0, mixer1, 3);
-AudioConnection          patchCord12(mixer5, 0, mixer2, 3);
+AudioConnection          patchCord16(mixer4, 0, mixer1, 3);
+AudioConnection          patchCord17(mixer5, 0, mixer2, 3);
 
 #if defined(__IMXRT1062__)
 // Only T4.1 has enough memory for modules
 TeensyXmp                playModule1;
-AudioConnection          patchCord9(playModule1, 0, mixer4, 0);
-AudioConnection          patchCord10(playModule1, 1, mixer5, 0);
+AudioConnection          patchCord14(playModule1, 0, mixer4, 0);
+AudioConnection          patchCord15(playModule1, 1, mixer5, 0);
 #endif
 
 //AudioConnection          patchCord7(sine1, 0, mixer4, 3);

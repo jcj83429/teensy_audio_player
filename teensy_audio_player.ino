@@ -147,9 +147,11 @@ void testSeek() {
   }
 }
 
+#if USE_F32
 void cycleReplayGain(){
   setReplayGainMode((ReplayGainMode)((replayGainMode + 1) % REPLAY_GAIN_MODES));
 }
+#endif
 
 void testSampleRate(){
   static int srIdx = 0;
@@ -220,9 +222,11 @@ bool doSerialControl(){
       case 'P':
         playPrev();
         break;
+#if USE_F32
       case 'R':
         cycleReplayGain();
         break;
+#endif
       case 'S':
         printStatus();
         break;
