@@ -462,7 +462,7 @@ void UiModeFiles::draw() {
   memset(framebuffer, 0, sizeof(framebuffer));
   int fileIdx = highlightedIdx & ~7;
   for(int i=0; i<8; i++){
-    if(i >= filesModeDirNav.curDirFiles()){
+    if(fileIdx >= filesModeDirNav.curDirFiles()){
       break;
     }
     char *fn = filesModeDirNav.curDirFileName(fileIdx);
