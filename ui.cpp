@@ -16,7 +16,12 @@ UiModeVolume uiModeVolume;
 
 UiModeBase *currentUiMode = &uiModeMain;
 
+#if defined(__IMXRT1062__) && USE_SPI_DMA
+// For T4.1, the DMA is directly from the framebuffer so it needs to be in DMAMEM
+DMAMEM uint8_t framebuffer[8][128];
+#else
 uint8_t framebuffer[8][128];
+#endif
 
 char errorMsg[2][20] = {0};
 unsigned long errorMsgEndTime = 0;
@@ -147,6 +152,12 @@ void printTime(int timesec, int x, int y){
   printNum(mins, 2, x, y);
   printChar(':', x + 12, y, false);
   printNum(secs, 2, x + 18, y);
+}
+
+void uiInit(){
+#if defined(__IMXRT1062__) && USE_HW_CS && USE_SPI_DMA
+  memset(framebuffer, 0, sizeof(framebuffer));
+#endif
 }
 
 void uiWriteFb(){

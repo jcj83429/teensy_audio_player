@@ -396,7 +396,6 @@ void setup() {
 #endif
 
 #endif
-
   vfdInit();
   // Set brightness to min. VFD draws too much power for USB
   vfdSend(0x4f, true);
@@ -405,6 +404,7 @@ void setup() {
 
 ///// END VFD
 
+  uiInit();
 
 ///// SD CARD
 

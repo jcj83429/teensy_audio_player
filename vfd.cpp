@@ -46,7 +46,7 @@ void vfdSetGram(bool isGram1) {
 }
 
 void vfdInit() {
-#if USE_SPI_DMA
+#if defined(KINETISK) && USE_HW_CS && USE_SPI_DMA
   vfdSpiDma = new DMAChannel();
 #endif
 
@@ -114,6 +114,18 @@ void vfdWriteFb(uint8_t *fb, bool isGram1) {
   }
   SPI0_SR = 0xFF0F0000;
   SPI0_RSER = 0;
+
+#elif (defined(__IMXRT1062__) && USE_HW_CS && USE_SPI_DMA)
+  arm_dcache_flush_delete(fb, 128 * 8);
+  // Due to the limited HW CS capabilities, 8 separate SPI bulk transfers have to be used
+  // use a dummy buffer for receive so the framebuffer doesn't get destroyed
+  uint8_t receiveBuf[128];
+  for(int i=0; i<8; i++){
+    vfdSetCursor(0, baseY + i);
+    digitalWriteFast(PIN_VFD_CMD_DATA, LOW);
+    SPI.transfer(fb + 128 * i, receiveBuf, 128);
+  }
+
 #else
   for(int i=0; i<8; i++){
     vfdSetCursor(0, baseY + i);
