@@ -372,6 +372,29 @@ void setup() {
   CORE_PIN6_CONFIG = PORT_PCR_MUX(2) | PORT_PCR_SRE; // pin 6 = PTD4 = SPI0_PCS1
   DUMPVAL(CORE_PIN6_CONFIG);
 #endif
+
+#else // Teensy 4.1
+
+  DUMPVAL(LPSPI4_CFGR0);
+  DUMPVAL(LPSPI4_CFGR1);
+  DUMPVAL(LPSPI4_CCR);
+  DUMPVAL(LPSPI4_TCR);
+
+#if USE_HW_CS
+  // The T4.1 SPI can only toggle one CS pin, so the HW CS is used for the SS pin and the CMD/DATA pin is toggled manually
+  SPI.setCS(PIN_VFD_SS);
+
+  int sckdiv = LPSPI_CCR_SCKDIV(LPSPI4_CCR);
+  // set SCKPCS, PCSSCK and DBT to SCKDIV/2.
+  // SCKDIV (SCK clock period) is at least 200ns by the SPI speed setting
+  // PCSSCK needs to be at least 40ns
+  // SCKPCS needs to be at least 150ns
+  // DBT needs to be at least 80ns.
+  // Some of these may already be set by the SPI library but it doesn't hurt to set them again.
+  LPSPI4_CCR = LPSPI_CCR_SCKPCS(sckdiv*3/4) | LPSPI_CCR_PCSSCK(sckdiv/5) | LPSPI_CCR_DBT(sckdiv*2/5) | LPSPI_CCR_SCKDIV(sckdiv);
+  DUMPVAL(LPSPI4_CCR);
+#endif
+
 #endif
 
   vfdInit();

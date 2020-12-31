@@ -1,6 +1,8 @@
 #include <SPI.h>
 #include "vfd.h"
 
+#if defined(KINETISK)
+
 #if USE_HW_CS
 
 #if USE_SPI_DMA
@@ -15,13 +17,19 @@ uint32_t spiCmd(uint8_t value, bool isCommand){
   uint8_t cs_pins = isCommand ? 1 : 3;
   return value | SPI_PUSHR_PCS(cs_pins);
 }
-#endif
+#endif // HW CS
+
+#endif // KINETISK
 
 void vfdSend(uint8_t value, bool isCommand) {
-#if USE_HW_CS
+#if defined(KINETISK) && USE_HW_CS
   SPI0_PUSHR = spiCmd(value, isCommand);
   while (!(SPI0_SR & SPI_SR_TCF));
   SPI0_SR = SPI_SR_TCF;
+#elif defined(__IMXRT1062__) && USE_HW_CS
+  digitalWriteFast(PIN_VFD_CMD_DATA, isCommand);
+  SPI.transfer(value);
+  digitalWriteFast(PIN_VFD_CMD_DATA, HIGH);
 #else
   digitalWriteFast(PIN_VFD_CMD_DATA, isCommand);
   digitalWriteFast(PIN_VFD_SS, LOW);
@@ -69,7 +77,7 @@ void vfdSetAutoInc(bool dx, bool dy) {
 
 void vfdWriteFb(uint8_t *fb, bool isGram1) {
   uint8_t baseY = isGram1 ? 8 : 0;
-#if (USE_HW_CS && USE_SPI_DMA)
+#if (defined(KINETISK) && USE_HW_CS && USE_SPI_DMA)
   int cmdIdx = 0;
   for(int i=0; i<8; i++){
     int y = baseY + i;
