@@ -446,7 +446,8 @@ UiMode UiModeFiles::update(bool redraw) {
   if(updated){
     highlightedFnOffset = 0;
   }else{
-    if((highlightedFnOffset > 0 && now - lastUpdateTime > 20) || now - lastUpdateTime > 500){
+    if(highlightedIdx < filesModeDirNav.curDirFiles() &&
+       ((highlightedFnOffset > 0 && now - lastUpdateTime > 20) || now - lastUpdateTime > 500)){
       int fnlen = strlen(filesModeDirNav.curDirFileName(highlightedIdx));
       if(fnlen > 21){
         highlightedFnOffset += 1;

@@ -463,7 +463,6 @@ void setup() {
   adc->adc0->enableInterrupts(low_voltage_isr);
   adc->adc0->startContinuous(VOLTAGE_DIVIDER_PIN);
 #endif
-
 }
 
 void loop() {
