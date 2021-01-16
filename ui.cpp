@@ -383,14 +383,13 @@ keysdone:
   }
 filenameend:
 
-  AudioCodec *playingCodec = getPlayingCodec();
-  if (playingCodec) {
-    uint32_t posMs = playingCodec->positionMillis();
-    uint32_t lenMs = playingCodec->lengthMillis();
+  uint32_t posMs = positionMs();
+  uint32_t lenMs = lengthMs();
+  if(lenMs && posMs <= lenMs){
     int timePos = posMs * (128 - 11 * 6) / lenMs;
-    printTime(playingCodec->positionMillis() / 1000, timePos, 7);
+    printTime(posMs / 1000, timePos, 7);
     printChar('/', timePos + 30, 7, false);
-    printTime(playingCodec->lengthMillis() / 1000, timePos + 36, 7);
+    printTime(lenMs / 1000, timePos + 36, 7);
   }
 
   return UI_MODE_INVALID;
