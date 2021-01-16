@@ -421,6 +421,12 @@ void setup() {
 
 ///// END SD CARD
 
+///// PSRAM
+#if defined(__IMXRT1062__)
+  psram_alloc = tlsf_create_with_pool(psram_heap, sizeof(psram_heap));
+#endif
+///// END PSRAM
+
   Serial.println("ALL INIT DONE!");
 
   // make sd the current volume.

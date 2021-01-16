@@ -34,6 +34,10 @@ AudioConnection          patchCord17(mixer5, 0, mixer2, 3);
 TeensyXmp                playModule1;
 AudioConnection          patchCord14(playModule1, 0, mixer4, 0);
 AudioConnection          patchCord15(playModule1, 1, mixer5, 0);
+
+EXTMEM uint8_t psram_heap[8*1024*1024];
+tlsf_t psram_alloc;
+int psram_used = 0;
 #endif
 
 //AudioConnection          patchCord7(sine1, 0, mixer4, 3);
@@ -101,6 +105,38 @@ struct xmp_io_callbacks myXmpIoCb = {
 bool isPaused = false;
 
 DirectoryNavigator dirNav;
+
+#if defined(__IMXRT1062__)
+void *xmp_malloc(size_t bytes){
+  void *ptr = tlsf_malloc(psram_alloc, bytes);
+  if(!ptr){
+    Serial.print("xmp_malloc failed to allocate ");
+    Serial.print(bytes);
+    Serial.println("bytes");
+  }else{
+    psram_used += tlsf_block_size(ptr);
+  }
+  return ptr;
+}
+
+void xmp_free(void *ptr){
+  psram_used -= tlsf_block_size(ptr);
+  tlsf_free(psram_alloc, ptr);
+}
+
+void *xmp_realloc(void *ptr, size_t bytes){
+  int old_block_size =  tlsf_block_size(ptr);
+  ptr = tlsf_realloc(psram_alloc, ptr, bytes);
+  if(!ptr){
+    Serial.print("xmp_realloc failed to allocate ");
+    Serial.print(bytes);
+    Serial.println("bytes");
+  }else{
+    psram_used += tlsf_block_size(ptr) - old_block_size;
+  }
+  return ptr;
+}
+#endif
 
 void startPlayback(){
 #if USE_F32
