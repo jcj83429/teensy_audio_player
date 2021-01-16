@@ -12,6 +12,13 @@ size_t my_xmp_read(void *user_data, void *buf, size_t size, size_t num){
 */
   FsFile *file = (FsFile *)user_data;
   int bytes_read = file->read(buf, size * num);
+  if(bytes_read != size * num){
+    Serial.print("my_xmp_read: tried to read ");
+    Serial.print(size * num);
+    Serial.print(" bytes but got ");
+    Serial.print(bytes_read);
+    Serial.println(" bytes. ");
+  }
   /*
   Serial.print("return ");
   Serial.println(bytes_read / size);
