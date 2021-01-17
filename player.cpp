@@ -346,6 +346,8 @@ void playFile(FsFile *file) {
     }else{
       // XMP
       setSampleRate(44100);
+      Serial.print("psram_used: ");
+      Serial.println(psram_used);
     }
 #if USE_F32
     setGain(currentGain); // apply new replaygain
