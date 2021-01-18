@@ -4,7 +4,8 @@
 // first read from SD card to DMAMEM (malloc) then copy from DMAMEM to PSRAM
 // This slows down the reads but seems to improve the reliability of SD card reads
 // Maybe the SD card and PSRAM are interfering with each other because they're so close
-#define TWO_STEP_XMP_FILE_READ 1
+// This is no longer necessary with the SdFat drive strength fix.
+#define TWO_STEP_XMP_FILE_READ 0
 
 size_t my_xmp_read(void *user_data, void *buf, size_t size, size_t num){
 /*
