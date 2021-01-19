@@ -1,3 +1,5 @@
+#if defined(__IMXRT1062__)
+
 #include <SdFat.h>
 
 // Do my_xmp_read in two steps:
@@ -119,3 +121,5 @@ long my_xmp_size(void *user_data){
   FsFile *file = (FsFile *)user_data;
   return !file->fileSize();
 }
+
+#endif

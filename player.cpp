@@ -93,6 +93,7 @@ FsFile currentFile;
 char currentFileName[256] = {0};
 MyCodecFile myCodecFile(NULL);
 
+#if defined(__IMXRT1062__)
 struct xmp_io_callbacks myXmpIoCb = {
   .read = my_xmp_read,
   .seek = my_xmp_seek,
@@ -101,6 +102,7 @@ struct xmp_io_callbacks myXmpIoCb = {
   .size = my_xmp_size,
   .user_data = NULL,
 };
+#endif
 
 bool isPaused = false;
 
@@ -343,12 +345,15 @@ void playFile(FsFile *file) {
       Serial.println(playingCodec->replaygainPeak(true));
       Serial.print("RG album gain: ");
       Serial.println(playingCodec->replaygainGainDb(true));
+#if defined(__IMXRT1062__)
     }else{
       // XMP
       setSampleRate(44100);
       Serial.print("psram_used: ");
       Serial.println(psram_used);
+#endif
     }
+
 #if USE_F32
     setGain(currentGain); // apply new replaygain
 #endif
