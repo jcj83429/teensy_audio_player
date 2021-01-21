@@ -19,6 +19,8 @@
 #define EEPROM_OFFSET_VOLUME   (EEPROM_OFFSET_DIRSTACK + 4)
 // 2 bytes
 #define EEPROM_OFFSET_REPLAYGAIN (EEPROM_OFFSET_VOLUME + 1)
+// 1 byte
+#define EEPROM_OFFSET_RESUME_ATTEMPT (EEPROM_OFFSET_REPLAYGAIN + 2)
 
 #define SCB_AIRCR (*(volatile uint32_t *)0xE000ED0C) // Application Interrupt and Reset Control location
 

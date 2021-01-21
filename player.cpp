@@ -152,6 +152,14 @@ void startPlayback(){
 
   dirNav.openRoot(&sd);
 
+  int8_t resumeAttempt = EEPROM.read(EEPROM_OFFSET_RESUME_ATTEMPT);
+  if(resumeAttempt < 2){
+    EEPROM.write(EEPROM_OFFSET_RESUME_ATTEMPT, resumeAttempt + 1);
+  }else{
+    Serial.println("resume crashed 2+ times, skip resume this time");
+    goto noresume;
+  }
+
   currentFile = dirNav.restoreCurrentFile();
   if(currentFile.isOpen()){
     Serial.println("continue playing last played file");
@@ -161,15 +169,26 @@ void startPlayback(){
       playPosSec <<= 8;
       playPosSec |= EEPROM.read(EEPROM_OFFSET_PLAYTIME + i);
     }
-    Serial.print("resume to ");
-    Serial.println(playPosSec);
-    seekAbsolute(playPosSec);
+    if(resumeAttempt < 1){
+      Serial.print("resume to ");
+      Serial.println(playPosSec);
+      if(!seekAbsolute(playPosSec)){
+        Serial.println("resume seek failed, start from beginning");
+        stop();
+        currentFile.rewind();
+        playFile(&currentFile);
+      }
+    }else{
+      Serial.print("resume crashed once, skip seek this time");
+    }
+    EEPROM.write(EEPROM_OFFSET_RESUME_ATTEMPT, 0);
     return;
   }
 
   // resume failed. go back to root.
   while(dirNav.upDir());
 
+noresume:
   if (!playNext()) {
     displayError("NO FILES            ", "                    ", 10000);
     while (true) {
@@ -177,6 +196,7 @@ void startPlayback(){
       delay(1000);
     }
   }
+  EEPROM.write(EEPROM_OFFSET_RESUME_ATTEMPT, 0);
 }
 
 void savePlayerState(){
@@ -434,15 +454,16 @@ uint32_t positionMs() {
   return 0;
 }
 
-void seekAbsolute(uint32_t timesec) {
+bool seekAbsolute(uint32_t timesec) {
+  bool result = false;
   AudioCodec *playingCodec = getPlayingCodec();
   if (playingCodec) {
     if (timesec > playingCodec->lengthMillis() / 1000) {
-      return;
+      return false;
     }
     Serial.print("seeking to ");
     Serial.println(timesec);
-    bool result = playingCodec->seek(timesec);
+    result = playingCodec->seek(timesec);
     Serial.print("result: ");
     Serial.println(result);
     Serial.print("positionMillis: ");
@@ -450,17 +471,18 @@ void seekAbsolute(uint32_t timesec) {
 #if defined(__IMXRT1062__)
   } else if (playModule1.isPlaying()) {
     if (timesec > (uint32_t)playModule1.lengthMs() / 1000) {
-      return;
+      return false;
     }
     Serial.print("seeking to ");
     Serial.println(timesec);
-    bool result = playModule1.seekSec(timesec);
+    result = playModule1.seekSec(timesec);
     Serial.print("result: ");
     Serial.println(result);
     Serial.print("positionMs: ");
     Serial.println(playModule1.positionMs());
 #endif
   }
+  return result;
 }
 
 void seekRelative(int dtsec) {

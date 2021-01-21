@@ -65,7 +65,7 @@ bool isPlaying();
 void togglePause();
 uint32_t lengthMs();
 uint32_t positionMs();
-void seekAbsolute(uint32_t timesec);
+bool seekAbsolute(uint32_t timesec);
 void seekRelative(int dtsec);
 
 #if USE_F32
