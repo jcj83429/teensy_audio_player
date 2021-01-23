@@ -119,7 +119,7 @@ long my_xmp_size(void *user_data){
   Serial.print(__FUNCTION__);
 */
   FsFile *file = (FsFile *)user_data;
-  return !file->fileSize();
+  return file->fileSize();
 }
 
 #endif
