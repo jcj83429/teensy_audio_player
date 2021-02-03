@@ -4,7 +4,11 @@
 // teensy 3.6
 // SS and CMD/DATA are controlled by HW SPI CS
 #define PIN_VFD_SS 10
-#define PIN_VFD_CMD_DATA 6
+#if defined(KINETISK) // Teensy 3.6
+#define PIN_VFD_CMD_DATA 6 // one of the HW CS pins
+#else
+#define PIN_VFD_CMD_DATA 12 // MISO, or DATA[1] when the SPI is running in 2 bit mode
+#endif
 #define PIN_VFD_RST 14
 #define PIN_VFD_FRP 38
 

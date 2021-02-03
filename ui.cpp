@@ -16,12 +16,7 @@ UiModeVolume uiModeVolume;
 
 UiModeBase *currentUiMode = &uiModeMain;
 
-#if defined(__IMXRT1062__) && USE_SPI_DMA
-// For T4.1, the DMA is directly from the framebuffer so it needs to be in DMAMEM
-DMAMEM uint8_t framebuffer[8][128];
-#else
 uint8_t framebuffer[8][128];
-#endif
 
 char errorMsg[2][20] = {0};
 unsigned long errorMsgEndTime = 0;

@@ -393,6 +393,13 @@ void setup() {
   // Some of these may already be set by the SPI library but it doesn't hurt to set them again.
   LPSPI4_CCR = LPSPI_CCR_SCKPCS(sckdiv*3/4) | LPSPI_CCR_PCSSCK(sckdiv/5) | LPSPI_CCR_DBT(sckdiv*2/5) | LPSPI_CCR_SCKDIV(sckdiv);
   DUMPVAL(LPSPI4_CCR);
+
+  // set SPI to transfer 16 bits and use 2-bit mode. MISO becomes DATA[1] and it will carry the CMD/DATA.
+  LPSPI4_TCR = (LPSPI4_TCR & ~LPSPI_TCR_FRAMESZ(0xfff)) | LPSPI_TCR_FRAMESZ(15) | LPSPI_TCR_RXMSK | LPSPI_TCR_WIDTH(1);
+  DUMPVAL(LPSPI4_TCR);
+#else
+  // take pin 12 (MISO) back from the SPI module
+  pinMode(PIN_VFD_CMD_DATA, OUTPUT);
 #endif
 
 #endif

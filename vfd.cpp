@@ -7,24 +7,33 @@
 
 DMAChannel *vfdSpiDma;
 
-#if defined(KINETISK)
 #define FB_FULL_WRITE_CMDS (8 * (128 + 4))
+#if defined(__IMXRT1062__)
+DMAMEM uint16_t vfdcmdbuf[FB_FULL_WRITE_CMDS];
+#else
 uint32_t vfdcmdbuf[FB_FULL_WRITE_CMDS];
+#endif
+#endif // SPI DMA
 
 uint32_t spiCmd(uint8_t value, bool isCommand){
-  // teensy: use hardware CS to control SS and CMD/DATA
+#if defined(KINETISK)
+  // teensy3.6: use hardware CS to control SS and CMD/DATA
   // For command, pull the SS down. For data, pull the SS and CMD/DATA down.
   uint8_t cs_pins = isCommand ? 1 : 3;
   return value | SPI_PUSHR_PCS(cs_pins);
-}
-
-#elif defined(__IMXRT1062__)
-// T4 needs an additional DMA channel to empty the RX FIFO or the TX will get stuck
-DMAChannel *vfdSpiRxDma;
-
+#else
+  // teensy4.1: use SPI in 2-bit mode and transmit CMD/DATA in the second bit
+  uint16_t value2 = 0;
+  uint16_t mask = 0x80;
+  for(int i = 0; i < 8; i++){
+    value2 <<= 1;
+    value2 |= value & mask;
+    mask >>= 1;
+  }
+  value2 |= 0xaaaa * isCommand;
+  return value2;
 #endif
-
-#endif // SPI DMA
+}
 
 #endif // HW CS
 
@@ -34,9 +43,9 @@ void vfdSend(uint8_t value, bool isCommand) {
   while (!(SPI0_SR & SPI_SR_TCF));
   SPI0_SR = SPI_SR_TCF;
 #elif defined(__IMXRT1062__) && USE_HW_CS
-  digitalWriteFast(PIN_VFD_CMD_DATA, isCommand);
-  SPI.transfer(value);
-  digitalWriteFast(PIN_VFD_CMD_DATA, HIGH);
+  LPSPI4_TDR = spiCmd(value, isCommand);
+  while(LPSPI4_FSR);
+  while(LPSPI4_SR & LPSPI_SR_MBF);
 #else
   digitalWriteFast(PIN_VFD_CMD_DATA, isCommand);
   digitalWriteFast(PIN_VFD_SS, LOW);
@@ -55,9 +64,6 @@ void vfdSetGram(bool isGram1) {
 void vfdInit() {
 #if USE_HW_CS && USE_SPI_DMA
   vfdSpiDma = new DMAChannel();
-#if defined(__IMXRT1062__)
-  vfdSpiRxDma = new DMAChannel();
-#endif
 #endif
 
   // clear
@@ -87,7 +93,7 @@ void vfdSetAutoInc(bool dx, bool dy) {
 
 void vfdWriteFb(uint8_t *fb, bool isGram1) {
   uint8_t baseY = isGram1 ? 8 : 0;
-#if (defined(KINETISK) && USE_HW_CS && USE_SPI_DMA)
+#if (USE_HW_CS && USE_SPI_DMA)
   int cmdIdx = 0;
   for(int i=0; i<8; i++){
     int y = baseY + i;
@@ -99,6 +105,8 @@ void vfdWriteFb(uint8_t *fb, bool isGram1) {
       vfdcmdbuf[cmdIdx++] = spiCmd(fb[j], false);
     }
   }
+
+#if defined(KINETISK)
   /*
   cmdIdx = 0;
   for(int i=0; i<FB_FULL_WRITE_CMDS; i++){
@@ -125,49 +133,38 @@ void vfdWriteFb(uint8_t *fb, bool isGram1) {
   SPI0_SR = 0xFF0F0000;
   SPI0_RSER = 0;
 
-#elif (defined(__IMXRT1062__) && USE_HW_CS && USE_SPI_DMA)
-  arm_dcache_flush_delete(fb, 128 * 8);
-
-  // Due to the limited HW CS capabilities, 8 separate SPI bulk transfers have to be used
-  uint8_t dummyRxDest;
-  LPSPI4_DER = LPSPI_DER_TDDE | LPSPI_DER_RDDE; // enable transmit DMA request
-  for(int i=0; i<8; i++){
-    vfdSetCursor(0, baseY + i);
-    digitalWriteFast(PIN_VFD_CMD_DATA, LOW);
-    
-    //SPI.transfer(fb + 128 * i, receiveBuf, 128);
-
-    vfdSpiDma->disable();
-    vfdSpiDma->destination((volatile uint8_t&)LPSPI4_TDR);
-    vfdSpiDma->disableOnCompletion();
-    vfdSpiDma->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI4_TX);
-    vfdSpiDma->sourceBuffer(fb + 128 * i, 128);
-    vfdSpiDma->enable();
-
-    vfdSpiRxDma->disable();
-    vfdSpiRxDma->destination(dummyRxDest);
-    vfdSpiRxDma->transferCount(128);
-    vfdSpiRxDma->disableOnCompletion();
-    vfdSpiRxDma->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI4_RX);
-    vfdSpiRxDma->source((volatile uint8_t&)LPSPI4_RDR);
-    vfdSpiRxDma->enable();
-    unsigned long startTime = millis();
-
-    while(!(vfdSpiDma->complete() && vfdSpiRxDma->complete())){
-      if(millis() - startTime > 1000){
-        Serial.println("SPI DMA stuck");
-        DUMPVAL(LPSPI4_SR);
-        DUMPVAL(LPSPI4_TCR);
-        DUMPVAL(LPSPI4_DER);
-        DUMPVAL(LPSPI4_FSR);
-        startTime += 1000;
-      }
-    }
-    vfdSpiDma->clearComplete();
-    vfdSpiDma->disable();
-    vfdSpiRxDma->clearComplete();
-    vfdSpiRxDma->disable();
+#elif defined(__IMXRT1062__)
+  /*
+  for(int i=0; i<FB_FULL_WRITE_CMDS; i++){
+    LPSPI4_TDR = vfdcmdbuf[i];
+    while(LPSPI4_FSR);
+    while((LPSPI4_SR & LPSPI_SR_MBF));
   }
+  */
+  arm_dcache_flush_delete(vfdcmdbuf, sizeof(vfdcmdbuf));
+  LPSPI4_DER = LPSPI_DER_TDDE; // enable transmit DMA request
+  vfdSpiDma->disable();
+  vfdSpiDma->destination((volatile uint16_t&)LPSPI4_TDR);
+  vfdSpiDma->disableOnCompletion();
+  vfdSpiDma->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI4_TX);
+  vfdSpiDma->sourceBuffer(vfdcmdbuf, sizeof(vfdcmdbuf));
+  vfdSpiDma->enable();
+  unsigned long startTime = millis();
+
+  while(!vfdSpiDma->complete()){
+    if(millis() - startTime > 1000){
+      Serial.println("SPI DMA stuck");
+      DUMPVAL(LPSPI4_SR);
+      DUMPVAL(LPSPI4_TCR);
+      DUMPVAL(LPSPI4_DER);
+      DUMPVAL(LPSPI4_FSR);
+      startTime += 1000;
+    }
+  }
+  vfdSpiDma->clearComplete();
+  vfdSpiDma->disable();
+
+#endif // KINETISK or __IMXRT1062__
 
 #else
   for(int i=0; i<8; i++){
