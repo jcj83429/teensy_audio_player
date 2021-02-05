@@ -35,7 +35,7 @@ TeensyXmp                playModule1;
 AudioConnection          patchCord14(playModule1, 0, mixer4, 0);
 AudioConnection          patchCord15(playModule1, 1, mixer5, 0);
 
-EXTMEM uint8_t psram_heap[8*1024*1024];
+EXTMEM uint8_t psram_heap[16*1024*1024];
 tlsf_t psram_alloc;
 int psram_used = 0;
 #endif

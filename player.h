@@ -18,7 +18,7 @@ extern AudioPlaySdOpus          playOpus1;
 
 #if defined(__IMXRT1062__)
 extern TeensyXmp                playModule1;
-extern EXTMEM uint8_t psram_heap[8*1024*1024];
+extern EXTMEM uint8_t psram_heap[16*1024*1024];
 extern tlsf_t psram_alloc;
 #endif
 
