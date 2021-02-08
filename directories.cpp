@@ -25,7 +25,7 @@ unsigned long long cacheSearchTime = 0;
 char * getCachedFileName(FsFile *dir, uint16_t fileIdx){
   unsigned long long startTime = micros();
   // first search for the file in the cache
-  uint32_t dirFirstCluster = dir->firstCluster();
+  uint32_t dirFirstCluster = dir->firstSector();
 //  Serial.print("(");
 //  Serial.print(dirFirstCluster);
 //  Serial.print(", ");
