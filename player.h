@@ -34,15 +34,6 @@ extern AudioAnalyzeFFT256_F32   fft256;
 extern AudioPeakHold analyzePeak1;
 extern AudioPeakHold analyzePeak2;
 
-#if !USE_F32
-
-#if USE_I2S_SLAVE
-//////////////////// I2S clock generator
-extern Si5351 si5351;
-#endif
-
-#endif
-
 extern FsFile currentFile;
 extern char currentFileName[256];
 extern MyCodecFile myCodecFile;

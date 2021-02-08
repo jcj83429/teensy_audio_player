@@ -3,7 +3,6 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SerialFlash.h>
-#include "si5351.h"
 #include "vfd.h"
 #include "font.h"
 #include "ui.h"
@@ -314,20 +313,6 @@ void setup() {
   // sine1.amplitude(1);
   // sine1.frequency(1000);
 
-#if !USE_F32
-#if USE_I2S_SLAVE
-  // si5351 setup
-  bool si5351_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-  if (si5351_found) {
-    Serial.println("si5351 found");
-  } else {
-    while (1) {
-      Serial.println("si5351 not found");
-      delay(100);
-    }
-  }
-#endif
-#endif
 ///// END AUDIO
 
 ///// VFD

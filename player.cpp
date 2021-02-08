@@ -52,13 +52,7 @@ AudioConnection          patchCord102(mixer2, analyzePeak2);
 #if !USE_F32
 
 // 16 bit out
-#if USE_I2S_SLAVE
-AudioOutputI2Sslave      i2s1;
-//////////////////// I2S clock generator
-Si5351 si5351;
-#else
 AudioOutputI2S           i2s1;
-#endif
 // 16 bit fft
 AudioAnalyzeFFT256       fft256;
 AudioMixer4              mixer3;
@@ -248,31 +242,10 @@ void resumeDecoding() {
 void setSampleRate(unsigned long long sampleRate) {
   Serial.print("changing sample rate to ");
   Serial.println((int)sampleRate);
-#if USE_I2S_SLAVE
-  uint8_t error;
-  // sometimes the sample rate setting doens't go through, so repeate 3 times
-  for (int i = 0; i < 3; i++) {
-    // clk0 = LRCLK
-    error = si5351.set_freq(sampleRate * SI5351_FREQ_MULT, SI5351_CLK0);
-    if (error) {
-      Serial.print("error clk0 ");
-      Serial.println(error);
-      return;
-    }
-    // clk1 = BCLK
-    error = si5351.set_freq(64 * sampleRate * SI5351_FREQ_MULT, SI5351_CLK1);
-    if (error) {
-      Serial.print("error clk1 ");
-      Serial.println(error);
-      return;
-    }
-  }
-#else
   float result = setI2SFreq(sampleRate);
   if(!result){
     Serial.println("sample rate not supported");
   }
-#endif
   if(sampleRate <= 24000){
     fft256.averageTogether(1);
   }else if(sampleRate <= 48000){
