@@ -12,7 +12,6 @@ To build this project,
  - Delete play_sd_wav.cpp/h and play_sd_raw.cpp/h from the teensy audio library (arduino-1.8.10/hardware/teensy/avr/libraries/Audio). They require SD.h which conflicts with SdFat.
  - Use my patched Arduino-Teensy-Codec-lib which has the SD.h dependency removed and extra functionality (i.e. Opus) added. (https://github.com/jcj83429/Arduino-Teensy-Codec-lib)
  - Use my fork of OpenAudio_ArduinoLibrary with proper 32 bit output (https://github.com/jcj83429/OpenAudio_ArduinoLibrary)
- - Use my fork of SdFat-beta with fixes and enhancements (https://github.com/jcj83429/SdFat-beta)
 
 For best decoding performance (needed to play 192/24 FLAC files smoothly), build with optimization set to Fastest + pure-code with LTO.
 
