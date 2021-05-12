@@ -4,6 +4,7 @@
 #include <SPI.h>
 #include <SerialFlash.h>
 #include "vfd.h"
+#include "oled.h"
 #include "font.h"
 #include "ui.h"
 #include "player.h"
@@ -323,6 +324,7 @@ void setup() {
   vfdSetAutoInc(1, 0);
   Serial.println("VFD init done");
 
+//  oledInit();
 ///// END VFD
 
   uiInit();

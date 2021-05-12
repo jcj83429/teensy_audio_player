@@ -1,5 +1,6 @@
 #include "ui.h"
 #include "vfd.h"
+#include "oled.h"
 #include "font.h"
 #include "player.h"
 #include <Arduino.h>
@@ -157,6 +158,7 @@ void uiInit(){
 
 void uiWriteFb(){
   vfdWriteFb(&framebuffer[0][0], 0);
+  //oledWriteFb(&framebuffer[0][0]);
 }
 
 void renderError(){
