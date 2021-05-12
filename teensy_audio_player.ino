@@ -316,78 +316,7 @@ void setup() {
 ///// END AUDIO
 
 ///// VFD
-  // SS and CMD/DATA pin modes will be overwritten by CORE_PIN*_CONFIG below
-  pinMode(PIN_VFD_SS, OUTPUT);
-  pinMode(PIN_VFD_CMD_DATA, OUTPUT);
-  pinMode(PIN_VFD_RST, OUTPUT);
-  //pinMode(PIN_VFD_FRP, INPUT);
-  digitalWrite(PIN_VFD_RST, LOW);
-  delay(1);
-  digitalWrite(PIN_VFD_RST, HIGH);
 
-  SPI.begin();
-
-  // set SPI mode once and never touch it again
-  // The VFD supports up to 5MHz. Use half of it for safety
-  SPI.beginTransaction(SPISettings(2500000, MSBFIRST, SPI_MODE3));
-  SPI.endTransaction();
-
-#if defined(KINETISK) // Teensy 3.6
-  DUMPVAL(SPI0_CTAR0);
-  DUMPVAL(SPI0_PUSHR);
-  SPI0_CTAR0 &= ~(SPI_CTAR_ASC(0xf));
-  // set up SPI delay params to meet timing requirements of the VFD
-  // the minimum delays required to meet requirements
-  // SPI0_CTAR0 |= SPI_CTAR_CSSCK(1) | SPI_CTAR_PASC(1) | SPI_CTAR_ASC(1) | SPI_CTAR_PDT(1) | SPI_CTAR_DT(0);
-  // double the delays for safety
-  SPI0_CTAR0 |= SPI_CTAR_CSSCK(2) | SPI_CTAR_PASC(1) | SPI_CTAR_ASC(2) | SPI_CTAR_PDT(1) | SPI_CTAR_DT(1);
-  DUMPVAL(SPI0_CTAR0);
-  DUMPVAL(SPI0_PUSHR);
-
-#if USE_HW_CS
-  // The drive strength (DSE) and slew rate (SRE) settings are a hacky way to make C/D slower than SS
-  // Otherwise I can't use HW SPI CS and SPI DMA.
-  // The display has trouble understanding the signal when the SS and C/D switch at exactly the same time
-  // PIN 10 = SS
-  DUMPVAL(CORE_PIN10_CONFIG);
-  CORE_PIN10_CONFIG = PORT_PCR_MUX(2) | PORT_PCR_DSE; // pin 10 = PTC4 = SPI0_PCS0
-  DUMPVAL(CORE_PIN10_CONFIG);
-  // PIN 6 = CMD/DATA
-  DUMPVAL(CORE_PIN6_CONFIG);
-  CORE_PIN6_CONFIG = PORT_PCR_MUX(2) | PORT_PCR_SRE; // pin 6 = PTD4 = SPI0_PCS1
-  DUMPVAL(CORE_PIN6_CONFIG);
-#endif
-
-#else // Teensy 4.1
-
-  DUMPVAL(LPSPI4_CFGR0);
-  DUMPVAL(LPSPI4_CFGR1);
-  DUMPVAL(LPSPI4_CCR);
-  DUMPVAL(LPSPI4_TCR);
-
-#if USE_HW_CS
-  // The T4.1 SPI can only toggle one CS pin, so the HW CS is used for the SS pin and the CMD/DATA pin is toggled manually
-  SPI.setCS(PIN_VFD_SS);
-
-  int sckdiv = LPSPI_CCR_SCKDIV(LPSPI4_CCR);
-  // set SCKPCS, PCSSCK and DBT to SCKDIV/2.
-  // SCKDIV (SCK clock period) is at least 200ns by the SPI speed setting
-  // PCSSCK needs to be at least 40ns
-  // SCKPCS needs to be at least 150ns
-  // DBT needs to be at least 80ns.
-  // Some of these may already be set by the SPI library but it doesn't hurt to set them again.
-  LPSPI4_CCR = LPSPI_CCR_SCKPCS(sckdiv*3/4) | LPSPI_CCR_PCSSCK(sckdiv/5) | LPSPI_CCR_DBT(sckdiv*2/5) | LPSPI_CCR_SCKDIV(sckdiv);
-  DUMPVAL(LPSPI4_CCR);
-
-  // set SPI to transfer 16 bits and use 2-bit mode. MISO becomes DATA[1] and it will carry the CMD/DATA.
-  LPSPI4_TCR = (LPSPI4_TCR & ~LPSPI_TCR_FRAMESZ(0xfff)) | LPSPI_TCR_FRAMESZ(15) | LPSPI_TCR_RXMSK | LPSPI_TCR_WIDTH(1);
-  DUMPVAL(LPSPI4_TCR);
-#else
-  // take pin 12 (MISO) back from the SPI module
-  pinMode(PIN_VFD_CMD_DATA, OUTPUT);
-#endif
-
-#endif
   vfdInit();
   // Set brightness to min. VFD draws too much power for USB
   vfdSend(0x4f, true);
