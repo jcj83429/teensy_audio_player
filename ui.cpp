@@ -285,7 +285,30 @@ keysdone:
     }
     fftBinLog = (fftBinLog << 1) | lsb;
 #else
-    float32_t fftBin = fft256.output[i];
+    float32_t fftBin = 0;
+#if !USE_MRFFT
+    fftBin = fft256.output[i];
+#else
+    if(i >= 128 - 12 * 3 + 8) {
+      // top 3 octaves use the full Fs FFT
+      fftBin = fftBin1x(i);
+    }else if(i >= 128 - 12 * 3) {
+      // smoothly transition between full Fs FFT and Fs/4 FFT
+      float weight = 0.125 * (i - (128 - 12 * 3));
+      fftBin = fftBin1x(i) * weight + fftBin4x(i) * (1.0 - weight);
+    }else if(i >= 128 - 12 * 5 + 8) {
+      // middle 2 octaves use the Fs/4 FFT
+      fftBin = fftBin4x(i);
+    }else if(i >= 128 - 12 * 5) {
+      // smoothly transition between Fs/4 FFT and Fs/16 FFT
+      float weight = 0.125 * (i - (128 - 12 * 5));
+      fftBin = fftBin4x(i) * weight + fftBin16x(i) * (1.0 - weight);
+    }else{
+      // bottom 5 2/3 octaves use the Fs/16 FFT
+      fftBin = fftBin16x(i);
+    }
+#endif
+
     fu.f = fftBin * fftBin; // 2 * log(x) = log(x^2);
     int fftBinLog = (fu.u >> 23) & 0xff; // just get exponent
     fftBinLog -= 96;
@@ -394,6 +417,83 @@ filenameend:
 
   return UI_MODE_INVALID;
 }
+
+#if USE_MRFFT
+const float log2x12Table[13] = {
+  1.0,
+  1.0594630943592953,
+  1.122462048309373,
+  1.189207115002721,
+  1.2599210498948732,
+  1.3348398541700344,
+  1.4142135623730951,
+  1.4983070768766815,
+  1.5874010519681994,
+  1.681792830507429,
+  1.7817974362806785,
+  1.887748625363387,
+  2.0,
+};
+float UiModeMain::fftBin1x(int x){
+  if(x < 128 - 3 * 12){
+    return 0;
+  }
+  float fftBin = 0;
+  int log2x12 = x - (128 - 12 * 3);
+  int baseBin = 16;
+  while(log2x12 >= 12){
+    baseBin *= 2;
+    log2x12 -= 12;
+  }
+  int startBin = baseBin * log2x12Table[log2x12] + 0.5;
+  int endBin = baseBin * log2x12Table[log2x12 + 1] + 0.5;
+  for(int j = startBin; j < endBin; j++){
+    fftBin += fft256.output[j];
+  }
+  return fftBin;
+}
+
+float UiModeMain::fftBin4x(int x){
+  if(x < 128 - 5 * 12 || x >= 128 - 2 * 12){
+    return 0;
+  }
+  float fftBin = 0;
+  int log2x12 = x - (128 - 12 * 5);
+  int baseBin = 16;
+  while(log2x12 >= 12){
+    baseBin *= 2;
+    log2x12 -= 12;
+  }
+  int startBin = baseBin * log2x12Table[log2x12] + 0.5;
+  int endBin = baseBin * log2x12Table[log2x12 + 1] + 0.5;
+  for(int j = startBin; j < endBin; j++){
+    fftBin += fft256mr.output4[j];
+  }
+  return fftBin;
+}
+
+float UiModeMain::fftBin16x(int x){
+  if(x >= 128 - 4 * 12){
+    return 0;
+  }
+  float fftBin = 0;
+  int log2x12 = x + 4;
+  int baseBin = 1;
+  while(log2x12 >= 12){
+    baseBin *= 2;
+    log2x12 -= 12;
+  }
+  int startBin = baseBin * log2x12Table[log2x12] + 0.5;
+  int endBin = baseBin * log2x12Table[log2x12 + 1] + 0.5;
+  if(endBin == startBin){
+    endBin++;
+  }
+  for(int j = startBin; j < endBin; j++){
+    fftBin += fft256mr.output16[j];
+  }
+  return fftBin;
+}
+#endif
 
 void UiModeFiles::enter(){
   // all files are opened read only, so just copy the whole dirNav

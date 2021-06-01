@@ -80,6 +80,11 @@ AudioConnection_F32      patchCordf04(gain2, 0, i2s32, 1);
 AudioConnection_F32      patchCordf05(i16tof32l, 0, mixer3, 0);
 AudioConnection_F32      patchCordf06(i16tof32r, 0, mixer3, 3);
 AudioConnection_F32      patchCordf07(mixer3, 0, fft256, 0);
+#if USE_MRFFT
+// multiresolution FFT (downsampled)
+AudioAnalyzeFFT256MR_F32   fft256mr;
+AudioConnection_F32      patchCordf08(mixer3, 0, fft256mr, 0);
+#endif
 
 #endif
 

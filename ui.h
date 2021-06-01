@@ -69,6 +69,12 @@ public:
 class UiModeMain : public UiModeBase {
 public:
   UiMode update(bool redraw);
+
+#if USE_MRFFT
+  float fftBin1x(int x);
+  float fftBin4x(int x);
+  float fftBin16x(int x);
+#endif
 };
 
 class UiModeFiles : public UiModeBase {

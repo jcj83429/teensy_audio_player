@@ -4,6 +4,7 @@
 #include <SdFat.h>
 
 #define USE_F32 1
+#define USE_MRFFT 1
 #define DAC_MAX_SAMPLE_RATE 192000
 
 // Needed for T4.1 only
