@@ -317,14 +317,15 @@ void setup() {
 ///// END AUDIO
 
 ///// VFD
-
+#if USE_VFD
   vfdInit();
   // Set brightness to min. VFD draws too much power for USB
   vfdSend(0x4f, true);
   vfdSetAutoInc(1, 0);
   Serial.println("VFD init done");
-
-//  oledInit();
+#elif USE_OLED
+  oledInit();
+#endif
 ///// END VFD
 
   uiInit();

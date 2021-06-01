@@ -8,6 +8,9 @@
 #define PIN_KEY_NEXT 28
 #define PIN_KEY_FN1 26
 
+#define USE_VFD 1
+#define USE_OLED 0
+
 enum KeyId {
   KEY_PREV,
   KEY_RWD,

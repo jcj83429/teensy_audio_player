@@ -157,8 +157,11 @@ void uiInit(){
 }
 
 void uiWriteFb(){
+#if USE_VFD
   vfdWriteFb(&framebuffer[0][0], 0);
-  //oledWriteFb(&framebuffer[0][0]);
+#elif USE_OLED
+  oledWriteFb(&framebuffer[0][0]);
+#endif
 }
 
 void renderError(){
