@@ -44,6 +44,7 @@ public:
   void averageTogether(uint8_t n) {
     if (n == 0) n = 1;
     naverage = n;
+    count = 0;
   }
   void windowFunction(const int16_t *w) {
     window = w;

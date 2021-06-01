@@ -251,13 +251,18 @@ void setSampleRate(unsigned long long sampleRate) {
   if(!result){
     Serial.println("sample rate not supported");
   }
+  int nAvg;
   if(sampleRate <= 24000){
-    fft256.averageTogether(1);
+    nAvg = 1;
   }else if(sampleRate <= 48000){
-    fft256.averageTogether(2);
+    nAvg = 2;
   }else{
-    fft256.averageTogether(4);
+    nAvg = 4;
   }
+  fft256.averageTogether(nAvg);
+#if USE_MRFFT
+  fft256mr.averageTogether(nAvg);
+#endif
 }
 
 AudioCodec *getPlayingCodec() {
