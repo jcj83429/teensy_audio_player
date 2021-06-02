@@ -38,6 +38,7 @@ SdFs sd;
 void low_voltage_isr(void){
   digitalWrite(LED_PIN, true);
   savePlayerState();
+  saveUiState();
   // If we are still alive after 1s, reset
   delay(1000);
   Serial.end();  //clears the serial monitor  if used
@@ -297,6 +298,8 @@ void setup() {
   pinMode(PIN_KEY_FF, INPUT_PULLDOWN);
   pinMode(PIN_KEY_NEXT, INPUT_PULLDOWN);
   pinMode(PIN_KEY_FN1, INPUT_PULLDOWN);
+  pinMode(PIN_KEY_PGUP, INPUT_PULLDOWN);
+  pinMode(PIN_KEY_PGDN, INPUT_PULLDOWN);
 
 ///// AUDIO
   AudioMemory(20);

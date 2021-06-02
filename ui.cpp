@@ -4,6 +4,7 @@
 #include "font.h"
 #include "player.h"
 #include <Arduino.h>
+#include <EEPROM.h>
 
 #define DEBOUNCE_TIME 50
 #define KEY_REPEAT_TIME 100
@@ -60,6 +61,20 @@ struct KeyInfo keys[] = {
   },
   [KEY_FN1] = {
     .pin = PIN_KEY_FN1,
+    .event = KEY_EV_NONE,
+    .lastState = 0,
+    .lastChangeTime = 0,
+    .lastEventTime = 0,
+  },
+  [KEY_PGUP] = {
+    .pin = PIN_KEY_PGUP,
+    .event = KEY_EV_NONE,
+    .lastState = 0,
+    .lastChangeTime = 0,
+    .lastEventTime = 0,
+  },
+  [KEY_PGDN] = {
+    .pin = PIN_KEY_PGDN,
     .event = KEY_EV_NONE,
     .lastState = 0,
     .lastChangeTime = 0,
@@ -154,6 +169,11 @@ void uiInit(){
 #if defined(__IMXRT1062__) && USE_HW_CS && USE_SPI_DMA
   memset(framebuffer, 0, sizeof(framebuffer));
 #endif
+  uiModeMain.restoreState();
+}
+
+void saveUiState(){
+  uiModeMain.saveState();
 }
 
 void uiWriteFb(){
@@ -266,6 +286,12 @@ UiMode UiModeMain::update(bool redraw){
   if(keys[KEY_FN1].event == KEY_EV_DOWN){
     return UI_MODE_FILES;
   }
+#if USE_MRFFT
+  if(keys[KEY_PGUP].event == KEY_EV_DOWN || keys[KEY_PGDN].event == KEY_EV_DOWN){
+    fft_mode = 1 - fft_mode;
+    goto keysdone;
+  }
+#endif
 keysdone:
 
   union {
@@ -286,26 +312,30 @@ keysdone:
     fftBinLog = (fftBinLog << 1) | lsb;
 #else
     float32_t fftBin = 0;
-#if !USE_MRFFT
-    fftBin = fft256.output[i];
-#else
-    if(i >= 128 - 12 * 3 + 8) {
-      // top 3 octaves use the full Fs FFT
-      fftBin = fftBin1x(i);
-    }else if(i >= 128 - 12 * 3) {
-      // smoothly transition between full Fs FFT and Fs/4 FFT
-      float weight = 0.125 * (i - (128 - 12 * 3));
-      fftBin = fftBin1x(i) * weight + fftBin4x(i) * (1.0 - weight);
-    }else if(i >= 128 - 12 * 5 + 8) {
-      // middle 2 octaves use the Fs/4 FFT
-      fftBin = fftBin4x(i);
-    }else if(i >= 128 - 12 * 5) {
-      // smoothly transition between Fs/4 FFT and Fs/16 FFT
-      float weight = 0.125 * (i - (128 - 12 * 5));
-      fftBin = fftBin4x(i) * weight + fftBin16x(i) * (1.0 - weight);
+#if USE_MRFFT
+    if(fft_mode == 0){
+#endif
+      fftBin = fft256.output[i];
+#if USE_MRFFT
     }else{
-      // bottom 5 2/3 octaves use the Fs/16 FFT
-      fftBin = fftBin16x(i);
+      if(i >= 128 - 12 * 3 + 8) {
+        // top 3 octaves use the full Fs FFT
+        fftBin = fftBin1x(i);
+      }else if(i >= 128 - 12 * 3) {
+        // smoothly transition between full Fs FFT and Fs/4 FFT
+        float weight = 0.125 * (i - (128 - 12 * 3));
+        fftBin = fftBin1x(i) * weight + fftBin4x(i) * (1.0 - weight);
+      }else if(i >= 128 - 12 * 5 + 8) {
+        // middle 2 octaves use the Fs/4 FFT
+        fftBin = fftBin4x(i);
+      }else if(i >= 128 - 12 * 5) {
+        // smoothly transition between Fs/4 FFT and Fs/16 FFT
+        float weight = 0.125 * (i - (128 - 12 * 5));
+        fftBin = fftBin4x(i) * weight + fftBin16x(i) * (1.0 - weight);
+      }else{
+        // bottom 5 2/3 octaves use the Fs/16 FFT
+        fftBin = fftBin16x(i);
+      }
     }
 #endif
 
@@ -416,6 +446,18 @@ filenameend:
   }
 
   return UI_MODE_INVALID;
+}
+
+void UiModeMain::saveState(){
+#if USE_MRFFT
+  EEPROM.write(EEPROM_OFFSET_FFT_MODE, fft_mode);
+#endif
+}
+
+void UiModeMain::restoreState(){
+#if USE_MRFFT
+  fft_mode = EEPROM.read(EEPROM_OFFSET_FFT_MODE) % 2;
+#endif
 }
 
 #if USE_MRFFT
@@ -540,6 +582,27 @@ UiMode UiModeFiles::update(bool redraw) {
   }else if(keys[KEY_RWD].event & KEY_EV_DOWN){
     highlightedIdx = (highlightedIdx + filesModeDirNav.curDirFiles() - 1) % filesModeDirNav.curDirFiles();
     updated = true;
+  }else if(keys[KEY_PGUP].event & KEY_EV_DOWN){
+    if(filesModeDirNav.curDirFiles()){
+      if(highlightedIdx < 8){
+        // go to last page
+        highlightedIdx = ((filesModeDirNav.curDirFiles() - 1) & ~7) + highlightedIdx;
+        highlightedIdx = min(highlightedIdx, filesModeDirNav.curDirFiles() - 1);
+      }else{
+        highlightedIdx -= 8;
+      }
+      updated = true;
+    }
+  }else if(keys[KEY_PGDN].event & KEY_EV_DOWN){
+    if(filesModeDirNav.curDirFiles()){
+      if((highlightedIdx & ~7) < ((filesModeDirNav.curDirFiles() - 1) & ~7)){
+        highlightedIdx += 8;
+        highlightedIdx = min(highlightedIdx, filesModeDirNav.curDirFiles() - 1);
+      }else{
+        highlightedIdx &= 7;
+      }
+      updated = true;
+    }
   }
 
   if(updated){

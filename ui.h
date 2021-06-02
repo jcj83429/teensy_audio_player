@@ -7,6 +7,8 @@
 #define PIN_KEY_FF   27
 #define PIN_KEY_NEXT 28
 #define PIN_KEY_FN1 26
+#define PIN_KEY_PGUP 25
+#define PIN_KEY_PGDN 24
 
 #define USE_VFD 1
 #define USE_OLED 0
@@ -18,6 +20,8 @@ enum KeyId {
   KEY_FF,
   KEY_NEXT,
   KEY_FN1,
+  KEY_PGUP,
+  KEY_PGDN,
   NUM_KEYS,
 };
 
@@ -54,6 +58,7 @@ void printStr(const char *s, int maxLen, int x, int y, bool highlight);
 void printNum(int n, int digits, int x, int y);
 void printTime(int timesec, int x, int y);
 void uiInit();
+void saveUiState();
 void uiWriteFb();
 void uiUpdate();
 void displayError(const char *line0, const char *line1, unsigned long duration);
@@ -69,8 +74,11 @@ public:
 class UiModeMain : public UiModeBase {
 public:
   UiMode update(bool redraw);
+  void saveState();
+  void restoreState();
 
 #if USE_MRFFT
+  uint8_t fft_mode = 0;
   float fftBin1x(int x);
   float fftBin4x(int x);
   float fftBin16x(int x);
