@@ -4,7 +4,10 @@
 #include <SdFat.h>
 
 #define USE_F32 1
-#define USE_MRFFT 1
+
+// running multiple FFTs on teensy 3.6 causes serious performance problems when playing opus or high sample rate flac
+#define USE_MRFFT (USE_F32 && defined(__IMXRT1062__))
+
 #define DAC_MAX_SAMPLE_RATE 192000
 
 // Needed for T4.1 only
