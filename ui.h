@@ -1,5 +1,6 @@
 #include "directories.h"
 #include "common.h"
+#include <Entropy.h>
 
 #define PIN_KEY_PREV 37
 #define PIN_KEY_RWD  38
@@ -73,9 +74,16 @@ public:
 
 class UiModeMain : public UiModeBase {
 public:
+  UiModeMain() {
+    Entropy.Initialize();
+    // randomly shift the filename in main mode horizontally to reduce display burn in
+    filenameOffset = Entropy.random(4) - 1;
+  }
   UiMode update(bool redraw);
   void saveState();
   void restoreState();
+
+  int filenameOffset;
 
 #if USE_MRFFT
   uint8_t fft_mode = 0;

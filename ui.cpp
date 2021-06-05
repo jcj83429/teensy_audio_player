@@ -431,7 +431,7 @@ keysdone:
       if(c == 0){
         goto filenameend;
       }
-      printChar(c, i * 6, j + 4, false);
+      printChar(c, filenameOffset + i * 6, j + 4, false);
     }
   }
 filenameend:
