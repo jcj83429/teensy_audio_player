@@ -743,8 +743,11 @@ keysdone:
   printStr(strbuf, 5, 128-30, 3, false);
 
   printStr("Effective RG", 21, 12, 4, false);
-  snprintf(strbuf, 10, "%+5.1fdB", effectiveReplayGain());
-  printStr(strbuf, 7, 128 - 42, 4, false);
+  //workaround lack of float support in snprintf when -Os is used
+  //snprintf(strbuf, 10, "%+5.1fdB", effectiveReplayGain());
+  //printStr(strbuf, 7, 128 - 42, 4, false);
+  snprintf(strbuf, 8, "%c%d.%ddB", effectiveReplayGain() < 0 ? '-' : '+', (int)abs(effectiveReplayGain()), (int)(abs(effectiveReplayGain())*10) % 10);
+  printStr(strbuf, strlen(strbuf), 128 - strlen(strbuf) * 6, 4, false);
 
   int highlightRow;
   switch(selectedSetting){
