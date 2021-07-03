@@ -23,16 +23,19 @@ extern const int16_t AudioWindowTukey256[];
 #define FFT_SIZE 256
 #define DOWNSAMPLE_FILTER_LEN 64
 
+extern float32_t downsampleFilter[DOWNSAMPLE_FILTER_LEN];
+
 class AudioAnalyzeFFT256MR_F32 : public AudioStream_F32
 {
 public:
   AudioAnalyzeFFT256MR_F32() : AudioStream_F32(1, inputQueueArray),
     window(AudioWindowHanning256), count(0), outputflag(false) {
     arm_cfft_radix4_init_f32(&fft_inst, 256, 0, 1);
-    memset(input, 0, sizeof(input));
-    memset(input4, 0, sizeof(input));
-    memset(input16, 0, sizeof(input));
+    memset(input4, 0, sizeof(input4));
+    memset(input16, 0, sizeof(input16));
     naverage = 1;
+    arm_fir_decimate_init_f32(&decimate4, DOWNSAMPLE_FILTER_LEN, 4, downsampleFilter, state4, AUDIO_BLOCK_SAMPLES);
+    arm_fir_decimate_init_f32(&decimate16, DOWNSAMPLE_FILTER_LEN, 4, downsampleFilter, state16, AUDIO_BLOCK_SAMPLES / 4);
   }
   bool available() {
     if (outputflag == true) {
@@ -50,15 +53,20 @@ public:
     window = w;
   }
   virtual void update(void);
-  float32_t output4[128] __attribute__ ((aligned (4)));
-  float32_t output16[128] __attribute__ ((aligned (4)));
+  float32_t output4[FFT_SIZE / 2] __attribute__ ((aligned (4)));
+  float32_t output16[FFT_SIZE / 2] __attribute__ ((aligned (4)));
 private:
-  // most recent 64 samples from the last block plus the samples from this block
-  float32_t input[DOWNSAMPLE_FILTER_LEN + AUDIO_BLOCK_SAMPLES];
   // input downsampled 4 times
   float32_t input4[FFT_SIZE] __attribute__ ((aligned (4)));
   // input downsampled 16 times
   float32_t input16[FFT_SIZE] __attribute__ ((aligned (4)));
+
+  // buffers required by arm fir decimate
+  float32_t state4[DOWNSAMPLE_FILTER_LEN + AUDIO_BLOCK_SAMPLES] __attribute__ ((aligned (4)));
+  float32_t state16[DOWNSAMPLE_FILTER_LEN + AUDIO_BLOCK_SAMPLES / 4] __attribute__ ((aligned (4)));
+
+  arm_fir_decimate_instance_f32 decimate4;
+  arm_fir_decimate_instance_f32 decimate16;
 
   const int16_t *window;  
   float32_t buffer[FFT_SIZE * 2] __attribute__ ((aligned (4)));
