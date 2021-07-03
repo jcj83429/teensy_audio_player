@@ -6,6 +6,9 @@
 #include "vfd.h"
 #include "player.h"
 
+#if defined(__IMXRT1062__)
+DMAMEM
+#endif
 char fileNameCache[FILE_NAME_CACHE_SIZE];
 
 typedef struct FileNameCacheEntryInfo {
