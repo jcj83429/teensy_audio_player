@@ -11,7 +11,12 @@
 #define KEY_REPEAT_DELAY 250
 
 UiModeMain uiModeMain;
+
+#if defined(__IMXRT1062__)
+DMAMEM
+#endif
 UiModeFiles uiModeFiles;
+
 #if USE_F32
 UiModeVolume uiModeVolume;
 #endif

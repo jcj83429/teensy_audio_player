@@ -105,6 +105,9 @@ struct xmp_io_callbacks myXmpIoCb = {
 
 bool isPaused = false;
 
+#if defined(__IMXRT1062__)
+DMAMEM
+#endif
 DirectoryNavigator dirNav;
 
 #if defined(__IMXRT1062__)
