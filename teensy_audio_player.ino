@@ -333,6 +333,16 @@ void setup() {
 
   uiInit();
 
+#if defined(__IMXRT1062__)
+  printStr("Teensy 4.1", 21, 0, 3, false);
+  printStr("MOD S3M XM IT", 21, 0, 6, false);
+#else
+  printStr("Teensy 3.6", 21, 0, 3, false);
+#endif
+  printStr("FAT32 ExFAT", 21, 0, 4, false);
+  printStr("MP3 AAC FLAC OPUS", 21, 0, 5, false);
+  uiWriteFb();
+
 ///// SD CARD
 
   //while (!sd.begin(SdSpiConfig(SDCARD_SS_PIN, DEDICATED_SPI, SD_SCK_MHZ(50)))) {
