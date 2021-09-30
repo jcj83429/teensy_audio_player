@@ -21,8 +21,6 @@
 #define USE_SPI_DMA 1
 #endif 
 
-#define DUMPVAL(x) do{ Serial.print(#x); Serial.print(": "); Serial.println(x, HEX); }while(0);
-
 void vfdSend(uint8_t value, bool isCommand);
 void vfdSetGram(bool isGram1);
 void vfdInit();

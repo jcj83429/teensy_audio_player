@@ -11,9 +11,6 @@
 #define PIN_KEY_PGUP 25
 #define PIN_KEY_PGDN 24
 
-#define USE_VFD 1
-#define USE_OLED 0
-
 enum KeyId {
   KEY_PREV,
   KEY_RWD,

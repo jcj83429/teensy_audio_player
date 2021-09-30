@@ -1,5 +1,8 @@
 #include <SPI.h>
 #include "vfd.h"
+#include "common.h"
+
+#if USE_VFD
 
 #if USE_HW_CS
 
@@ -248,3 +251,5 @@ void vfdWriteFb(uint8_t *fb, bool isGram1) {
   }
 #endif
 }
+
+#endif // USE_VFD

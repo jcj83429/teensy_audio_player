@@ -2,21 +2,36 @@
 
 #include <SPI.h>
 #include "oled.h"
+#include "common.h"
+
+#if USE_OLED
+
+#if OLED_SPI_DMA
+DMAChannel *oledSpiDma;
+
+#define FB_FULL_WRITE_BYTES (8 * 8 * 64)
+DMAMEM uint8_t oledcmdbuf[FB_FULL_WRITE_BYTES];
+#endif
 
 void oledSend(uint8_t value, bool isCommand){
   digitalWriteFast(OLED_DC, !isCommand);
-  digitalWriteFast(OLED_CS, LOW);
-  SPI.transfer(value);
-  digitalWriteFast(OLED_CS, HIGH);
+  //digitalWriteFast(OLED_CS, LOW);
+  //SPI.transfer(value);
+  LPSPI4_TDR = value;
+  while((LPSPI4_FSR & 0xff) || (LPSPI4_SR & LPSPI_SR_MBF));
+  //digitalWriteFast(OLED_CS, HIGH);
   digitalWriteFast(OLED_DC, HIGH);
 }
 
 void oledInit(){
   SPI.begin();
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
-  pinMode(OLED_CS, OUTPUT);
+  //pinMode(OLED_CS, OUTPUT);
+  SPI.setCS(OLED_CS);
   pinMode(OLED_DC, OUTPUT);
   pinMode(OLED_RESET, OUTPUT);
+  // We never read anything from the receive FIFO, so enable NOSTALL to ignore receive FIFO full.
+  LPSPI4_CFGR1 |= LPSPI_CFGR1_NOSTALL;
 
   digitalWrite(OLED_RESET, 0);
   delay(1);
@@ -42,6 +57,10 @@ void oledInit(){
   oledSend(0x7F, true);
   oledSend(0xA4, true); // Set Display Mode normal
   oledSend(0xAF, true); // Set Display Mode on
+
+#if OLED_SPI_DMA
+  oledSpiDma = new DMAChannel();
+#endif
 }
 
 void oledWriteFb(uint8_t *fb) {
@@ -51,6 +70,10 @@ void oledWriteFb(uint8_t *fb) {
   oledSend(0x75, true); // Set Row Address
   oledSend(0, true);
   oledSend(63, true);
+
+#if OLED_SPI_DMA
+  int cmdIdx = 0;
+#endif
 
   for(int i = 0; i < 8; i++){
     for(int j = 0; j < 8; j++){
@@ -64,8 +87,39 @@ void oledWriteFb(uint8_t *fb) {
         if(*fbptr++ & mask){
           pixpair |= 0x0F;
         }
+#if OLED_SPI_DMA
+        oledcmdbuf[cmdIdx++] = pixpair;
+#else
         oledSend(pixpair, false);
+#endif
       }
     }
   }
+
+#if OLED_SPI_DMA
+  arm_dcache_flush_delete(oledcmdbuf, sizeof(oledcmdbuf));
+  LPSPI4_DER = LPSPI_DER_TDDE; // enable transmit DMA request
+  oledSpiDma->disable();
+  oledSpiDma->destination((volatile uint8_t&)LPSPI4_TDR);
+  oledSpiDma->disableOnCompletion();
+  oledSpiDma->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI4_TX);
+  oledSpiDma->sourceBuffer(oledcmdbuf, sizeof(oledcmdbuf));
+  oledSpiDma->enable();
+  unsigned long startTime = millis();
+
+  while(!oledSpiDma->complete()){
+    if(millis() - startTime > 1000){
+      Serial.println("SPI DMA stuck");
+      DUMPVAL(LPSPI4_SR);
+      DUMPVAL(LPSPI4_TCR);
+      DUMPVAL(LPSPI4_DER);
+      DUMPVAL(LPSPI4_FSR);
+      startTime += 1000;
+    }
+  }
+  oledSpiDma->clearComplete();
+  oledSpiDma->disable();
+#endif
 }
+
+#endif // USE_OLED
