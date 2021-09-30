@@ -1,6 +1,6 @@
 #define OLED_CS 10
-#define OLED_RESET 9
-#define OLED_DC 8
+#define OLED_RESET 14
+#define OLED_DC 12
 
 void oledInit();
 
