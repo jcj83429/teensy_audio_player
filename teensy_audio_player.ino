@@ -336,6 +336,10 @@ void setup() {
 #if defined(__IMXRT1062__)
   printStr("Teensy 4.1", 21, 0, 3, false);
   printStr("MOD S3M XM IT", 21, 0, 6, false);
+  const float clocks[4] = {396.0f, 720.0f, 664.62f, 528.0f};
+  const int psramFrequency = clocks[(CCM_CBCMR >> 8) & 3] / (float)(((CCM_CBCMR >> 29) & 7) + 1);
+  printStr("PSRAM: 16MB    MHz", 21, 0, 7, false);
+  printNum(psramFrequency, 3, 72, 7);
 #else
   printStr("Teensy 3.6", 21, 0, 3, false);
 #endif
