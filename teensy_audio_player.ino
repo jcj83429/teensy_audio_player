@@ -409,7 +409,7 @@ void setup() {
   adc->adc0->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::VERY_LOW_SPEED);
   adc->adc0->setAveraging(32);
   adc->adc0->enableCompare((3.7/2) / 3.3 * adc->adc0->getMaxValue(), false);
-  adc->adc0->enableInterrupts(low_voltage_isr);
+  adc->adc0->enableInterrupts(low_voltage_isr, 192); // higher priority than audio decoding
   adc->adc0->startContinuous(VOLTAGE_DIVIDER_PIN);
 #endif
 }
