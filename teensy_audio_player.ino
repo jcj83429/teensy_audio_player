@@ -14,6 +14,7 @@
 
 #if defined(__IMXRT1062__)
 #include <ADC.h>
+#include <T4_PowerButton.h>
 #endif
 
 // I2S wiring
@@ -35,10 +36,14 @@ void *unused_malloc_padding;
 
 SdFs sd;
 
-void low_voltage_isr(void){
-  digitalWrite(LED_PIN, true);
+void saveStates(void){
   savePlayerState();
   saveUiState();
+}
+
+void low_voltage_isr(void){
+  digitalWrite(LED_PIN, true);
+  saveStates();
   // If we are still alive after 1s, reset
   delay(1000);
   Serial.end();  //clears the serial monitor  if used
@@ -411,6 +416,11 @@ void setup() {
   adc->adc0->enableCompare((3.7/2) / 3.3 * adc->adc0->getMaxValue(), false);
   adc->adc0->enableInterrupts(low_voltage_isr, 192); // higher priority than audio decoding
   adc->adc0->startContinuous(VOLTAGE_DIVIDER_PIN);
+
+  // also enable soft power button
+  set_arm_power_button_debounce(arm_power_button_debounce_50ms);
+  set_arm_power_button_press_on_time(arm_power_button_press_on_time_50ms);
+  set_arm_power_button_callback(&saveStates);
 #endif
 }
 
