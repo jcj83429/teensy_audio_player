@@ -354,6 +354,9 @@ void setup() {
 
 ///// SD CARD
 
+  // Some SD cards will error out if accessed too soon after power up
+  while(millis() < 125);
+
   //while (!sd.begin(SdSpiConfig(SDCARD_SS_PIN, DEDICATED_SPI, SD_SCK_MHZ(50)))) {
   while (!sd.begin(SdioConfig(FIFO_SDIO))) {
     Serial.println("SdFs begin() failed");
