@@ -7,7 +7,7 @@
 #define FILE_NAME_CACHE_SIZE 10000
 #define FILE_NAME_CACHE_MAX_ENTRIES 256
 
-#define MAX_DIR_STACK 4
+#define MAX_DIR_STACK 8
 #define MAX_DIR_FILES 256
 
 enum FileType {
