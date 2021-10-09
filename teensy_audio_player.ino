@@ -291,7 +291,6 @@ bool doSerialControl(){
 }
 
 void setup() {
-  delay(100);
   Serial.begin(115200);
   //while(!Serial);
 
@@ -355,7 +354,7 @@ void setup() {
 ///// SD CARD
 
   // Some SD cards will error out if accessed too soon after power up
-  while(millis() < 125);
+  while(millis() < 300);
 
   //while (!sd.begin(SdSpiConfig(SDCARD_SS_PIN, DEDICATED_SPI, SD_SCK_MHZ(50)))) {
   while (!sd.begin(SdioConfig(FIFO_SDIO))) {
