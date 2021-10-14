@@ -36,6 +36,10 @@ void *unused_malloc_padding;
 
 SdFs sd;
 
+void powerButtonNoopCallback(void){
+  // this is used for soft power button callback before SD init is done
+}
+
 void saveStates(void){
   savePlayerState();
   saveUiState();
@@ -351,6 +355,13 @@ void setup() {
   printStr("MP3 AAC FLAC OPUS", 21, 0, 5, false);
   uiWriteFb();
 
+#if defined(__IMXRT1062__)
+  // T4.1: enable soft power button with noop callback
+  set_arm_power_button_debounce(arm_power_button_debounce_50ms);
+  set_arm_power_button_press_on_time(arm_power_button_press_on_time_50ms);
+  set_arm_power_button_callback(&powerButtonNoopCallback);
+#endif
+
 ///// SD CARD
 
   // Some SD cards will error out if accessed too soon after power up
@@ -419,9 +430,7 @@ void setup() {
   adc->adc0->enableInterrupts(low_voltage_isr, 192); // higher priority than audio decoding
   adc->adc0->startContinuous(VOLTAGE_DIVIDER_PIN);
 
-  // also enable soft power button
-  set_arm_power_button_debounce(arm_power_button_debounce_50ms);
-  set_arm_power_button_press_on_time(arm_power_button_press_on_time_50ms);
+  // change soft power button callback from noop
   set_arm_power_button_callback(&saveStates);
 #endif
 }
