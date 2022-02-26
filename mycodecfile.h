@@ -23,7 +23,14 @@ public:
     return sdFile->fileSize();
   }
   size_t fread(uint8_t buffer[],size_t bytes) {
-    return sdFile->read(buffer, bytes);
+    int readBytes = sdFile->read(buffer, bytes);
+    if(readBytes < 0){
+      Serial.print("SD read failed with ");
+      Serial.println(readBytes);
+      return 0;
+    } else {
+      return readBytes;
+    }
   }
 
 protected:
