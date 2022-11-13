@@ -158,15 +158,20 @@ void printNum(int n, int digits, int x, int y){
 }
 
 void printTime(int timesec, int x, int y){
-  if (timesec > 5999) {
-    // can only display up to 99:99
-    timesec = 5999;
-  }
   int mins = timesec / 60;
   int secs = timesec % 60;
 
-  printNum(mins, 2, x, y);
-  printChar(':', x + 12, y, false);
+  if(mins > 999) {
+    // can only display up to 999 minutse
+    mins = 999;
+  }
+  if(mins > 99) {
+    // display times from 100 to 999 minutes by omitting the separator
+    printNum(mins, 3, x, y);
+  }else{
+    printNum(mins, 2, x, y);
+    printChar(':', x + 12, y, false);
+  }
   printNum(secs, 2, x + 18, y);
 }
 
